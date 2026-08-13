@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Search, X, Check, User, Building2 } from 'lucide-react';
 import type { ClienteResumen } from '../../types/cliente';
-import { MOCK_CLIENTES } from '../../data/mockClientes';
+import { clienteService } from '../../services/clienteService';
 import styles from './ClienteSearchSelector.module.css';
 
 interface ClienteSearchSelectorProps {
@@ -49,7 +49,18 @@ export const ClienteSearchSelector: React.FC<ClienteSearchSelectorProps> = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState('');
+  const [clientesList, setClientesList] = useState<ClienteResumen[]>(() => clienteService.getClientesResumen());
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Escuchar actualizaciones de clienteService
+  useEffect(() => {
+    const updateList = () => {
+      setClientesList(clienteService.getClientesResumen());
+    };
+    const unsubscribe = clienteService.subscribe(updateList);
+    updateList();
+    return () => unsubscribe();
+  }, []);
 
   // Cerrar al hacer clic afuera
   useEffect(() => {
@@ -62,7 +73,7 @@ export const ClienteSearchSelector: React.FC<ClienteSearchSelectorProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const availableClientes = MOCK_CLIENTES.filter(
+  const availableClientes = clientesList.filter(
     (c) => !excludeId || c.id !== excludeId
   );
 
@@ -76,7 +87,8 @@ export const ClienteSearchSelector: React.FC<ClienteSearchSelectorProps> = ({
     );
   });
 
-  const selectedClient = MOCK_CLIENTES.find((c) => c.id === value);
+  const selectedClient = clientesList.find((c) => c.id === value);
+
 
   return (
     <div className={styles.selectorWrapper} ref={containerRef}>

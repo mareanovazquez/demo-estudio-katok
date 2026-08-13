@@ -1,10 +1,8 @@
-import type { Cliente, ClienteResumen } from '../types/cliente';
-
 /**
  * 20 Clientes ficticios completos con datos exhaustivos según el modelo contable
  * de Estudio Katok (Identificación, Impositivo, Laboral, Facturación, Contacto, Relaciones y Archivo).
  */
-export const MOCK_CLIENTES_COMPLETOS: Cliente[] = [
+export const MOCK_CLIENTES_COMPLETOS = [
   // 1. Jurídica - Estudio / Servicios Profesionales
   {
     id: 'cli-001',
@@ -1298,7 +1296,7 @@ export const MOCK_CLIENTES_COMPLETOS: Cliente[] = [
 ];
 
 /** Resumen de clientes para selectores rápidos y autocompletado */
-export const MOCK_CLIENTES: ClienteResumen[] = MOCK_CLIENTES_COMPLETOS.map((c) => ({
+export const MOCK_CLIENTES = MOCK_CLIENTES_COMPLETOS.map((c) => ({
   id: c.id,
   codigo: c.codigo,
   razonSocial: c.razonSocial,
@@ -1311,13 +1309,13 @@ export const MOCK_CLIENTES: ClienteResumen[] = MOCK_CLIENTES_COMPLETOS.map((c) =
 /**
  * Función auxiliar para obtener un cliente completo por su ID
  */
-export function getClienteById(id: string): Cliente | undefined {
+export function getClienteById(id) {
   return MOCK_CLIENTES_COMPLETOS.find((c) => c.id === id);
 }
 
 /**
  * Función auxiliar para obtener clientes filtrados por estado activo/baja
  */
-export function getClientesActivos(): Cliente[] {
+export function getClientesActivos() {
   return MOCK_CLIENTES_COMPLETOS.filter((c) => !c.esBaja);
 }

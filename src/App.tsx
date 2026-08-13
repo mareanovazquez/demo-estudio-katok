@@ -1,136 +1,64 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ClienteForm } from './components/ClienteForm/ClienteForm';
-import type { ClienteFormData } from './types/cliente';
-import { PlusCircle, Edit3, CheckCircle, Database } from 'lucide-react';
+import { ClienteList } from './components/ClienteList/ClienteList';
+import type { Cliente, ClienteFormData } from './types/cliente';
+import { clienteService } from './services/clienteService';
+import { PlusCircle, ListFilter, CheckCircle, Database, ArrowLeft } from 'lucide-react';
 import styles from './App.module.css';
 
-// Ejemplo de datos para modo edición (Persona Jurídica con relaciones)
-const CLIENTE_EJEMPLO_JURIDICA: Partial<ClienteFormData> = {
-  codigo: '1042',
-  razonSocial: 'Katok & Asociados S.R.L.',
-  tipo: 'juridica',
-  cuit: '30-71458921-8',
-  domicilio: 'Av. Corrientes 1250, Piso 4 Of. A, CABA',
-  domicilioFiscal: 'Av. Corrientes 1250, Piso 4 Of. A, CABA',
-  nroLegajo: 'L-1042',
-  actividades: [
-    '692000 - Servicios de contabilidad, auditoría y asesoría fiscal',
-    '702000 - Servicios de consultoría en gestión empresarial',
-    '',
-  ],
-  agencia: 'Agencia 50 AFIP',
-  dgr: '901-28491823-1',
-  provinciaSede: 'CABA',
-  convenioMultilateralNro: '901-28491823-1',
-  fechaAlta: '2020-03-15',
-  fechaInicio: '2018-06-01',
-  iva: 'SI',
-  ingresosBrutos: true,
-  municipal: true,
-  publicidadPropaganda: false,
-  ganancias: true,
-  autonomos: false,
-  bienesPersonales: false,
-  balance: true,
-  gananciaMinimaPresunta: false,
-  categoria: 'Sociedad Comercial',
-  catFacturacion: 'CAT-A1',
-  cra: 'CRA-88',
-  contr: 'CONTR-02',
-  tedCla: 'CLA-01',
-  redParaVep: 'Interbanking / Banelco',
-  apo: 'Mariano Katok',
-  retGanancias: true,
-  retIngresosBrutos: true,
-  retSuss: true,
-  sueldos: true,
-  facturaElectronica: true,
-  periodicidad: 'Mensual',
-  fac: 'F',
-  cdor: 'MK',
-  clienteParaCobroId: '',
-  clienteParaCobroNombre: '',
-  mesCierre: 12,
-  telefonoFijo: '011 4371-8899',
-  celularWhatsapp: '+54 9 11 4455-8899',
-  email: 'administracion@katokasoc.com.ar',
-  canalPreferido: 'ambos',
-  relaciones: [
-    {
-      id: 'rel-1',
-      clienteId: 'cli-002',
-      clienteNombre: 'Mariano Javier Katok',
-      clienteCuit: '20-28945612-4',
-      clienteCodigo: '1043',
-      tipoVinculo: 'apoderado',
-    },
-  ],
-  esBaja: false,
-  biblioratoCarpeta: 'Estante 2 - Bibliorato Jurídicas A-K',
-};
+export function App() {
+  const [vista, setVista] = useState<'listado' | 'formulario'>('listado');
+  const [clienteAEditar, setClienteAEditar] = useState<Cliente | null>(null);
+  const [clientes, setClientes] = useState<Cliente[]>(() => clienteService.getClientes());
+  const [submittedPayload, setSubmittedPayload] = useState<Cliente | null>(null);
 
-// Ejemplo de persona física para probar
-const CLIENTE_EJEMPLO_FISICA: Partial<ClienteFormData> = {
-  codigo: '1044',
-  razonSocial: 'Lucía Belén Gómez',
-  tipo: 'fisica',
-  cuit: '27-34567890-3',
-  domicilio: 'Calle Florida 537, 2° B, CABA',
-  domicilioFiscal: 'Calle Florida 537, 2° B, CABA',
-  nroLegajo: 'L-1044',
-  actividades: ['749000 - Actividades profesionales y técnicas n.c.p.', '', ''],
-  agencia: 'Agencia 49',
-  dgr: '27-34567890-3',
-  provinciaSede: 'CABA',
-  convenioMultilateralNro: '',
-  fechaAlta: '2023-01-10',
-  fechaNacimiento: '1989-07-22',
-  fechaInicio: '2023-01-01',
-  iva: 'SI',
-  ingresosBrutos: true,
-  municipal: false,
-  publicidadPropaganda: false,
-  ganancias: false,
-  autonomos: false,
-  bienesPersonales: false,
-  balance: false,
-  gananciaMinimaPresunta: false,
-  categoria: 'Monotributo - Cat. C',
-  retGanancias: false,
-  retIngresosBrutos: false,
-  retSuss: false,
-  sueldos: false,
-  facturaElectronica: true,
-  periodicidad: 'Mensual',
-  fac: 'F',
-  cdor: 'MK',
-  clienteParaCobroId: 'cli-006',
-  clienteParaCobroNombre: 'Carlos Alberto Rodríguez',
-  mesCierre: 12,
-  telefonoFijo: '',
-  celularWhatsapp: '+54 9 11 3344-5566',
-  email: 'lucia.gomez@hotmail.com',
-  canalPreferido: 'whatsapp',
-  relaciones: [
-    {
-      id: 'rel-2',
-      clienteId: 'cli-006',
-      clienteNombre: 'Carlos Alberto Rodríguez',
-      clienteCuit: '20-18765432-1',
-      clienteCodigo: '1047',
-      tipoVinculo: 'cliente_cobro',
-    },
-  ],
-  esBaja: false,
-  biblioratoCarpeta: 'Cajón 4 - Monotributistas G',
-};
+  // Escuchar cambios en clienteService (guardados, bajas, resets)
+  useEffect(() => {
+    const syncClientes = () => {
+      setClientes(clienteService.getClientes());
+    };
+    const unsubscribe = clienteService.subscribe(syncClientes);
+    syncClientes();
+    return () => unsubscribe();
+  }, []);
 
-function App() {
-  const [modo, setModo] = useState<'alta' | 'editar_juridica' | 'editar_fisica'>('alta');
-  const [submittedPayload, setSubmittedPayload] = useState<ClienteFormData | null>(null);
+  // Handler para guardar desde el formulario
+  const handleSubmitForm = (formData: ClienteFormData) => {
+    const guardado = clienteService.saveCliente({
+      ...formData,
+      id: clienteAEditar?.id,
+    });
+    setSubmittedPayload(guardado);
+  };
 
-  const handleSubmitForm = (data: ClienteFormData) => {
-    setSubmittedPayload(data);
+  // Navegar a edición de cliente
+  const handleSelectEditar = (cliente: Cliente) => {
+    setClienteAEditar(cliente);
+    setVista('formulario');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Navegar a alta nueva
+  const handleNuevoCliente = () => {
+    setClienteAEditar(null);
+    setVista('formulario');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Cambiar estado baja
+  const handleToggleBaja = (id: string) => {
+    clienteService.toggleEstadoBaja(id);
+  };
+
+  // Restablecer mock data de 20 clientes
+  const handleResetMockData = () => {
+    if (
+      window.confirm(
+        '¿Desea restablecer la nómina a los 20 clientes ficticios originales?'
+      )
+    ) {
+      clienteService.resetToMockData();
+    }
   };
 
   return (
@@ -147,88 +75,100 @@ function App() {
           <span className={styles.brandBadge}>Maestro de Clientes v2.0</span>
         </div>
 
-        {/* Selector de modo para demostración y testing interactivo */}
+        {/* Barra de navegación principal */}
         <div className={styles.demoBar}>
-          <span className={styles.demoLabel}>Probar vista:</span>
-          <button
-            type="button"
-            className={`${styles.demoBtn} ${modo === 'alta' ? styles.demoBtnActive : ''}`}
-            onClick={() => {
-              setModo('alta');
-              setSubmittedPayload(null);
-            }}
-          >
-            <PlusCircle size={14} />
-            <span>Alta Nueva</span>
-          </button>
           <button
             type="button"
             className={`${styles.demoBtn} ${
-              modo === 'editar_juridica' ? styles.demoBtnActive : ''
+              vista === 'listado' ? styles.demoBtnActive : ''
             }`}
             onClick={() => {
-              setModo('editar_juridica');
-              setSubmittedPayload(null);
+              setVista('listado');
+              setClienteAEditar(null);
             }}
           >
-            <Edit3 size={14} />
-            <span>Editar Jurídica</span>
+            <ListFilter size={15} />
+            <span>Nómina de Clientes ({clientes.length})</span>
           </button>
+
           <button
             type="button"
             className={`${styles.demoBtn} ${
-              modo === 'editar_fisica' ? styles.demoBtnActive : ''
+              vista === 'formulario' ? styles.demoBtnActive : ''
             }`}
-            onClick={() => {
-              setModo('editar_fisica');
-              setSubmittedPayload(null);
-            }}
+            onClick={handleNuevoCliente}
           >
-            <Edit3 size={14} />
-            <span>Editar Física</span>
+            <PlusCircle size={15} />
+            <span>
+              {clienteAEditar ? `Editando: ${clienteAEditar.codigo}` : 'Nuevo Cliente'}
+            </span>
           </button>
         </div>
       </header>
 
       <main className={styles.mainContent}>
-        {/* Renderizado dinámico del formulario según el modo */}
-        {modo === 'alta' && (
-          <ClienteForm
-            key="form-alta"
-            onSubmit={handleSubmitForm}
-            onCancel={() => alert('Operación cancelada')}
-            isEditing={false}
+        {/* Vista 1: Listado de Clientes con Tabla y Filtros */}
+        {vista === 'listado' && (
+          <ClienteList
+            clientes={clientes}
+            onSelectEditar={handleSelectEditar}
+            onNuevoCliente={handleNuevoCliente}
+            onToggleBaja={handleToggleBaja}
+            onResetMockData={handleResetMockData}
           />
         )}
 
-        {modo === 'editar_juridica' && (
-          <ClienteForm
-            key="form-juridica"
-            initialData={CLIENTE_EJEMPLO_JURIDICA}
-            onSubmit={handleSubmitForm}
-            onCancel={() => setModo('alta')}
-            isEditing={true}
-          />
+        {/* Vista 2: Formulario completo de Alta / Edición */}
+        {vista === 'formulario' && (
+          <div>
+            <div style={{ marginBottom: '1.25rem' }}>
+              <button
+                type="button"
+                className={styles.actionButton}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  backgroundColor: '#475569',
+                }}
+                onClick={() => {
+                  setVista('listado');
+                  setClienteAEditar(null);
+                }}
+              >
+                <ArrowLeft size={16} />
+                <span>Volver al Listado de Clientes</span>
+              </button>
+            </div>
+
+            <ClienteForm
+              key={clienteAEditar ? `edit-${clienteAEditar.id}` : 'alta-nueva'}
+              initialData={clienteAEditar || undefined}
+              onSubmit={handleSubmitForm}
+              onCancel={() => {
+                setVista('listado');
+                setClienteAEditar(null);
+              }}
+              isEditing={!!clienteAEditar}
+            />
+          </div>
         )}
 
-        {modo === 'editar_fisica' && (
-          <ClienteForm
-            key="form-fisica"
-            initialData={CLIENTE_EJEMPLO_FISICA}
-            onSubmit={handleSubmitForm}
-            onCancel={() => setModo('alta')}
-            isEditing={true}
-          />
-        )}
-
-        {/* Modal / Panel de Datos Guardados para verificar la estructura */}
+        {/* Modal de confirmación y datos guardados */}
         {submittedPayload && (
           <div className={styles.modalBackdrop}>
             <div className={styles.modalContent}>
               <div className={styles.modalHeader}>
                 <div className={styles.modalTitleRow}>
-                  <CheckCircle size={24} className={styles.successIcon} />
-                  <h3 className={styles.modalTitle}>Payload de Cliente Procesado</h3>
+                  <CheckCircle size={26} className={styles.successIcon} />
+                  <div>
+                    <h3 className={styles.modalTitle}>
+                      ¡Cliente Guardado Exitosamente!
+                    </h3>
+                    <span className={styles.modalDescription}>
+                      Razón Social: <strong>{submittedPayload.razonSocial}</strong> | CUIT: <strong>{submittedPayload.cuit}</strong>
+                    </span>
+                  </div>
                 </div>
                 <button
                   type="button"
@@ -238,19 +178,34 @@ function App() {
                   ✕
                 </button>
               </div>
+
               <p className={styles.modalDescription}>
-                Estructura de datos tipada (<code>ClienteFormData</code>) validada por el esquema Zod:
+                El cliente ha sido procesado y persistido en la nómina del estudio:
               </p>
+
               <pre className={styles.codePreview}>
                 {JSON.stringify(submittedPayload, null, 2)}
               </pre>
-              <div className={styles.modalFooter}>
+
+              <div className={styles.modalFooter} style={{ gap: '0.75rem' }}>
+                <button
+                  type="button"
+                  className={styles.actionButton}
+                  style={{ backgroundColor: '#0f172a' }}
+                  onClick={() => {
+                    setSubmittedPayload(null);
+                    setVista('listado');
+                    setClienteAEditar(null);
+                  }}
+                >
+                  Volver al Listado
+                </button>
                 <button
                   type="button"
                   className={styles.actionButton}
                   onClick={() => setSubmittedPayload(null)}
                 >
-                  Cerrar
+                  Seguir Editando
                 </button>
               </div>
             </div>

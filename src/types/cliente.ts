@@ -117,3 +117,9 @@ export interface ClienteResumen {
   email?: string;
   celularWhatsapp?: string;
 }
+
+/** Entidad completa de cliente persistida con identificador único */
+export interface Cliente extends ClienteFormData {
+  id: string;
+}
+
