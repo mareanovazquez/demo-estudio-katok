@@ -1,0 +1,297 @@
+.selectorWrapper {
+  position: relative;
+  width: 100%;
+  font-family: var(--font-body);
+}
+
+.inputContainer {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.inputPrefix {
+  position: absolute;
+  left: var(--spacing-3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.input {
+  width: 100%;
+  font-family: var(--font-body);
+  font-size: var(--font-size-sm);
+  color: var(--text-main);
+  background-color: var(--bg-main);
+  border: var(--border-width-thin) solid var(--border-medium);
+  border-radius: var(--radius-base);
+  padding: var(--spacing-3) var(--spacing-8) var(--spacing-3) var(--spacing-8);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(0, 78, 152, 0.15);
+}
+
+.input:disabled {
+  background-color: var(--bg-soft);
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
+.inputError {
+  border-color: var(--error);
+}
+
+.inputError:focus {
+  border-color: var(--error);
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
+}
+
+.inputSuffixBtn {
+  position: absolute;
+  right: var(--spacing-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  padding: var(--spacing-1);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: color var(--transition-fast), background-color var(--transition-fast);
+}
+
+.inputSuffixBtn:hover {
+  color: var(--text-main);
+  background-color: var(--platinum);
+}
+
+.selectedCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: var(--bg-soft);
+  border: var(--border-width-thin) solid var(--border-light);
+  border-left: 4px solid var(--primary);
+  border-radius: var(--radius-base);
+  padding: var(--spacing-2) var(--spacing-3);
+  gap: var(--spacing-3);
+}
+
+.selectedCard.disabled {
+  opacity: 0.7;
+}
+
+.selectedInfo {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  min-width: 0;
+}
+
+.selectedIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-base);
+  background-color: rgba(0, 78, 152, 0.1);
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.selectedDetails {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.selectedName {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.selectedMeta {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+}
+
+.clearBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  padding: var(--spacing-1);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.clearBtn:hover {
+  background-color: var(--platinum);
+  color: var(--error);
+}
+
+.dropdown {
+  position: absolute;
+  top: calc(100% + var(--spacing-1));
+  left: 0;
+  right: 0;
+  background-color: var(--bg-main);
+  border: var(--border-width-thin) solid var(--border-medium);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  z-index: var(--elevation-4-z);
+  max-height: 280px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.dropdownHeader {
+  padding: var(--spacing-2) var(--spacing-3);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-muted);
+  background-color: var(--bg-soft);
+  border-bottom: var(--border-width-thin) solid var(--border-light);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.dropdownList {
+  overflow-y: auto;
+  padding: var(--spacing-1) 0;
+}
+
+.dropdownItem {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  padding: var(--spacing-2) var(--spacing-3);
+  background: transparent;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+
+.dropdownItem:hover {
+  background-color: var(--bg-soft);
+}
+
+.dropdownItemSelected {
+  background-color: rgba(0, 78, 152, 0.06);
+}
+
+.itemIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-base);
+  background-color: rgba(0, 78, 152, 0.08);
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.itemContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.itemTitleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-2);
+  margin-bottom: var(--spacing-1);
+}
+
+.itemName {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.typeBadge {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  padding: 0 var(--spacing-2);
+  border-radius: var(--radius-full);
+  line-height: var(--line-height-snug);
+  flex-shrink: 0;
+}
+
+.badgeJuridica {
+  background-color: var(--accent-bg);
+  color: var(--accent-hover);
+}
+
+.badgeFisica {
+  background-color: var(--info-bg);
+  color: var(--info-text);
+}
+
+.itemMeta {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+}
+
+.monoText {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+.highlight {
+  background-color: rgba(32, 163, 158, 0.25);
+  color: var(--text-main);
+  padding: 0 2px;
+  border-radius: 2px;
+  font-weight: var(--font-weight-bold);
+}
+
+.checkIcon {
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.noResults {
+  padding: var(--spacing-6) var(--spacing-4);
+  text-align: center;
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.errorMessage {
+  display: block;
+  font-size: var(--font-size-xs);
+  color: var(--error);
+  margin-top: var(--spacing-1);
+  font-weight: var(--font-weight-medium);
+}

@@ -1,0 +1,198 @@
+/* ============================================
+   VARIABLES.CSS
+   Estudio Contable — Sistema de Gestión
+   Design tokens globales — mobile-first (min-width)
+   ============================================ */
+ 
+:root {
+ 
+  /* ============================================
+     BREAKPOINTS (referencia — escala Bootstrap)
+     Usar siempre como @media (min-width: ...)
+     ============================================ */
+  --bp-sm: 576px;
+  --bp-md: 768px;
+  --bp-lg: 992px;
+  --bp-xl: 1200px;
+  --bp-xxl: 1400px;
+ 
+  /* ============================================
+     TIPOGRAFÍA — Familias
+     ============================================ */
+  --font-title: 'Work Sans', sans-serif;
+  --font-subtitle: 'Inter', sans-serif;
+  --font-body: 'Inter', sans-serif;
+  --font-button: 'Inter', sans-serif;
+  --font-highlight: 'Work Sans', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace; /* columnas numéricas: usar junto a font-variant-numeric: tabular-nums */
+ 
+  /* Tamaños de fuente (escala base: 1rem = 16px) */
+  --font-size-xs: 0.75rem;    /* 12px */
+  --font-size-sm: 0.875rem;   /* 14px */
+  --font-size-base: 1rem;     /* 16px */
+  --font-size-lg: 1.125rem;   /* 18px */
+  --font-size-xl: 1.25rem;    /* 20px */
+  --font-size-2xl: 1.5rem;    /* 24px */
+  --font-size-3xl: 1.875rem;  /* 30px */
+  --font-size-4xl: 2.25rem;   /* 36px */
+  --font-size-5xl: 3rem;      /* 48px */
+  --font-size-6xl: 3.75rem;   /* 60px */
+ 
+  /* Pesos de fuente */
+  --font-weight-light: 300;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --font-weight-extrabold: 800;
+  --font-weight-black: 900;
+ 
+  /* Line heights */
+  --line-height-tight: 1.25;
+  --line-height-snug: 1.375;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.625;
+  --line-height-loose: 2;
+ 
+  /* ============================================
+     ESPACIADO
+     ============================================ */
+  --spacing-1: 0.25rem;   /* 4px */
+  --spacing-2: 0.5rem;    /* 8px */
+  --spacing-3: 0.75rem;   /* 12px */
+  --spacing-4: 1rem;      /* 16px */
+  --spacing-5: 1.25rem;   /* 20px */
+  --spacing-6: 1.5rem;    /* 24px */
+  --spacing-8: 2rem;      /* 32px */
+  --spacing-10: 2.5rem;   /* 40px */
+  --spacing-12: 3rem;     /* 48px */
+  --spacing-14: 3.5rem;   /* 56px */
+  --spacing-16: 4rem;     /* 64px */
+  --spacing-20: 5rem;     /* 80px */
+  --spacing-24: 6rem;     /* 96px */
+ 
+  /* ============================================
+     BORDER RADIUS
+     ============================================ */
+  --radius-sm: 0.25rem;    /* 4px */
+  --radius-base: 0.5rem;   /* 8px */
+  --radius-md: 0.75rem;    /* 12px */
+  --radius-lg: 1rem;       /* 16px */
+  --radius-xl: 1.5rem;     /* 24px */
+  --radius-full: 9999px;   /* Circular */
+  --radius-none: 0;        /* Sin redondeo */
+ 
+  /* ============================================
+     BORDES
+     ============================================ */
+  --border-width-thin: 1px;
+  --border-width-base: 1.5px;
+  --border-width-thick: 2px;
+ 
+  /* ============================================
+     SOMBRAS
+     ============================================ */
+  --shadow-sm: rgba(99, 99, 99, 0.15) 0px 1px 4px 0px;
+  --shadow-base: rgba(99, 99, 99, 0.2) 0px 2px 8px 0px;
+  --shadow-lg: rgba(99, 99, 99, 0.3) 0px 4px 16px 0px;
+ 
+  /* ============================================
+     ELEVACIÓN (shadow + z-index emparejados)
+     Usar siempre las dos variables de un mismo nivel juntas
+     ============================================ */
+  --elevation-0-shadow: none;
+  --elevation-0-z: 0;
+ 
+  --elevation-1-shadow: var(--shadow-sm);
+  --elevation-1-z: 10;
+ 
+  --elevation-2-shadow: var(--shadow-base);
+  --elevation-2-z: 20;
+ 
+  --elevation-3-shadow: var(--shadow-base);
+  --elevation-3-z: 30;
+ 
+  --elevation-4-shadow: var(--shadow-lg);
+  --elevation-4-z: 40;
+ 
+  --elevation-5-shadow: var(--shadow-lg);
+  --elevation-5-z: 50;
+ 
+  --elevation-6-shadow: var(--shadow-lg);
+  --elevation-6-z: 60;
+ 
+  --elevation-7-shadow: var(--shadow-lg);
+  --elevation-7-z: 70;
+ 
+  /* ============================================
+     TRANSICIONES
+     ============================================ */
+  --transition-fast: 150ms ease-in-out;
+  --transition-base: 200ms ease-in-out;
+  --transition-slow: 300ms ease-in-out;
+  --transition-slower: 500ms ease-in-out;
+ 
+  /* Curvas de animación */
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+ 
+  /* ============================================
+     COLOR — Estados semánticos
+     ============================================ */
+  --success: #22c55e;
+  --success-bg: #f0fdf4;
+  --success-text: #166534;
+ 
+  --warning: #eab308;
+  --warning-bg: #fefce8;
+  --warning-text: #92400e;
+ 
+  --error: #ef4444;
+  --error-bg: #fef2f2;
+  --error-text: #991b1b;
+ 
+  --info: #3b82f6;
+  --info-bg: #eff6ff;
+  --info-text: #1e40af;
+ 
+  /* ============================================
+     COLOR — Texto
+     ============================================ */
+  --text-main: #1e293b;   /* Slate oscuro, alto contraste para cuerpo */
+  --text-muted: #64748b;  /* Slate gris, texto secundario */
+  --text-light: #fcfcfe;  /* Texto sobre fondos oscuros */
+ 
+  /* ============================================
+     COLOR — Paleta de marca
+     ============================================ */
+  --steel-azure: #004e98;
+  --cornflower-ocean: #3a6ea5;
+  --teal-accent: #20A39E;
+  --platinum: #ebebeb;
+  --silver: #c0c0c0;
+ 
+  /* ============================================
+     COLOR — Mapeo semántico del tema
+     ============================================ */
+  --primary: var(--steel-azure);
+  --primary-hover: #003b73;
+ 
+  --secondary: var(--cornflower-ocean);
+  --secondary-hover: #2c598a;
+ 
+  --accent: var(--teal-accent);
+  --accent-hover: #1B8B86;
+  --accent-bg: #E9F6F5;
+ 
+  /* ============================================
+     COLOR — Paleta neutra / superficies
+     ============================================ */
+  --bg-main: #fcfcfe;
+  --bg-soft: #f8fafc;
+  --bg-card: var(--bg-main);
+ 
+  --border-light: var(--platinum);
+  --border-medium: var(--silver);
+  --border-primary: var(--primary);
+}
