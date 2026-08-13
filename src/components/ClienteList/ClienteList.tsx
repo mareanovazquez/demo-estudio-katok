@@ -16,6 +16,7 @@ import {
   RefreshCw,
   Eye,
   FileText,
+  X,
 } from 'lucide-react';
 import styles from './ClienteList.module.css';
 
@@ -37,6 +38,7 @@ export const ClienteList: React.FC<ClienteListProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [filtroTipo, setFiltroTipo] = useState<'todos' | 'fisica' | 'juridica'>('todos');
   const [filtroEstado, setFiltroEstado] = useState<'todos' | 'activos' | 'bajas'>('todos');
+  const [filtroCategoria, setFiltroCategoria] = useState<string>('todos');
   const [clienteDetalle, setClienteDetalle] = useState<Cliente | null>(null);
 
   // Métricas rápidas
@@ -46,35 +48,84 @@ export const ClienteList: React.FC<ClienteListProps> = ({
   const fisicasCount = clientes.filter((c) => c.tipo === 'fisica').length;
   const juridicasCount = clientes.filter((c) => c.tipo === 'juridica').length;
 
-  // Filtrado dinámico
+  // Filtrado dinámico corregido
   const clientesFiltrados = clientes.filter((cliente) => {
-    // Filtro por tipo
+    // 1. Filtro por tipo
     if (filtroTipo === 'fisica' && cliente.tipo !== 'fisica') return false;
     if (filtroTipo === 'juridica' && cliente.tipo !== 'juridica') return false;
 
-    // Filtro por estado
+    // 2. Filtro por estado (activo / baja)
     if (filtroEstado === 'activos' && cliente.esBaja) return false;
     if (filtroEstado === 'bajas' && !cliente.esBaja) return false;
 
-    // Buscador
+    // 3. Filtro por categoría impositiva
+    if (filtroCategoria !== 'todos') {
+      const catLower = cliente.categoria.toLowerCase();
+      if (filtroCategoria === 'monotributo' && !catLower.includes('monotributo')) return false;
+      if (
+        filtroCategoria === 'responsable_inscripto' &&
+        !catLower.includes('responsable inscripto') &&
+        !catLower.includes('ri-')
+      )
+        return false;
+      if (
+        filtroCategoria === 'sociedad' &&
+        !catLower.includes('sociedad') &&
+        !catLower.includes('s.r.l.') &&
+        !catLower.includes('s.a.') &&
+        !catLower.includes('s.a.s.')
+      )
+        return false;
+    }
+
+    // 4. Buscador por texto
     if (searchTerm.trim()) {
       const q = searchTerm.toLowerCase().trim();
+      const qDigits = q.replace(/\D/g, '');
+
       const matchRazon = cliente.razonSocial.toLowerCase().includes(q);
-      const matchCuit = cliente.cuit.replace(/\D/g, '').includes(q.replace(/\D/g, ''));
       const matchCodigo = cliente.codigo.toLowerCase().includes(q);
       const matchLegajo = (cliente.nroLegajo || '').toLowerCase().includes(q);
       const matchEmail = (cliente.email || '').toLowerCase().includes(q);
+
+      // CORRECCIÓN CRÍTICA: solo comparar CUIT por dígitos si el usuario ingresó números
+      const matchCuit = qDigits
+        ? cliente.cuit.replace(/\D/g, '').includes(qDigits)
+        : cliente.cuit.toLowerCase().includes(q);
+
       return matchRazon || matchCuit || matchCodigo || matchLegajo || matchEmail;
     }
 
     return true;
   });
 
+  const hasFiltrosActivos =
+    searchTerm !== '' ||
+    filtroTipo !== 'todos' ||
+    filtroEstado !== 'todos' ||
+    filtroCategoria !== 'todos';
+
+  const resetAllFilters = () => {
+    setSearchTerm('');
+    setFiltroTipo('todos');
+    setFiltroEstado('todos');
+    setFiltroCategoria('todos');
+  };
+
   return (
     <div className={styles.container}>
-      {/* 1. Tarjetas KPI de Métricas */}
+      {/* 1. Tarjetas KPI de Métricas Interactivos */}
       <div className={styles.kpiGrid}>
-        <div className={styles.kpiCard}>
+        <button
+          type="button"
+          className={`${styles.kpiCard} ${
+            filtroTipo === 'todos' && filtroEstado === 'todos' ? styles.kpiCardActive : ''
+          }`}
+          onClick={() => {
+            setFiltroTipo('todos');
+            setFiltroEstado('todos');
+          }}
+        >
           <div className={`${styles.kpiIcon} ${styles.iconTotal}`}>
             <Users size={20} />
           </div>
@@ -82,9 +133,17 @@ export const ClienteList: React.FC<ClienteListProps> = ({
             <span className={styles.kpiValue}>{totalClientes}</span>
             <span className={styles.kpiLabel}>Total Clientes</span>
           </div>
-        </div>
+        </button>
 
-        <div className={styles.kpiCard}>
+        <button
+          type="button"
+          className={`${styles.kpiCard} ${
+            filtroEstado === 'activos' ? styles.kpiCardActive : ''
+          }`}
+          onClick={() => {
+            setFiltroEstado(filtroEstado === 'activos' ? 'todos' : 'activos');
+          }}
+        >
           <div className={`${styles.kpiIcon} ${styles.iconActivos}`}>
             <CheckCircle2 size={20} />
           </div>
@@ -92,9 +151,17 @@ export const ClienteList: React.FC<ClienteListProps> = ({
             <span className={styles.kpiValue}>{activosCount}</span>
             <span className={styles.kpiLabel}>Activos</span>
           </div>
-        </div>
+        </button>
 
-        <div className={styles.kpiCard}>
+        <button
+          type="button"
+          className={`${styles.kpiCard} ${
+            filtroTipo === 'juridica' ? styles.kpiCardActive : ''
+          }`}
+          onClick={() => {
+            setFiltroTipo(filtroTipo === 'juridica' ? 'todos' : 'juridica');
+          }}
+        >
           <div className={`${styles.kpiIcon} ${styles.iconJuridicas}`}>
             <Building2 size={20} />
           </div>
@@ -102,9 +169,17 @@ export const ClienteList: React.FC<ClienteListProps> = ({
             <span className={styles.kpiValue}>{juridicasCount}</span>
             <span className={styles.kpiLabel}>Personas Jurídicas</span>
           </div>
-        </div>
+        </button>
 
-        <div className={styles.kpiCard}>
+        <button
+          type="button"
+          className={`${styles.kpiCard} ${
+            filtroTipo === 'fisica' ? styles.kpiCardActive : ''
+          }`}
+          onClick={() => {
+            setFiltroTipo(filtroTipo === 'fisica' ? 'todos' : 'fisica');
+          }}
+        >
           <div className={`${styles.kpiIcon} ${styles.iconFisicas}`}>
             <User size={20} />
           </div>
@@ -112,9 +187,17 @@ export const ClienteList: React.FC<ClienteListProps> = ({
             <span className={styles.kpiValue}>{fisicasCount}</span>
             <span className={styles.kpiLabel}>Personas Físicas</span>
           </div>
-        </div>
+        </button>
 
-        <div className={styles.kpiCard}>
+        <button
+          type="button"
+          className={`${styles.kpiCard} ${
+            filtroEstado === 'bajas' ? styles.kpiCardActive : ''
+          }`}
+          onClick={() => {
+            setFiltroEstado(filtroEstado === 'bajas' ? 'todos' : 'bajas');
+          }}
+        >
           <div className={`${styles.kpiIcon} ${styles.iconBajas}`}>
             <XCircle size={20} />
           </div>
@@ -122,7 +205,7 @@ export const ClienteList: React.FC<ClienteListProps> = ({
             <span className={styles.kpiValue}>{bajasCount}</span>
             <span className={styles.kpiLabel}>Dados de Baja</span>
           </div>
-        </div>
+        </button>
       </div>
 
       {/* 2. Barra de Herramientas, Buscador y Filtros */}
@@ -141,8 +224,9 @@ export const ClienteList: React.FC<ClienteListProps> = ({
               type="button"
               className={styles.clearSearchBtn}
               onClick={() => setSearchTerm('')}
+              title="Limpiar búsqueda"
             >
-              ✕
+              <X size={14} />
             </button>
           )}
         </div>
@@ -173,13 +257,38 @@ export const ClienteList: React.FC<ClienteListProps> = ({
             </select>
           </div>
 
+          <div className={styles.filterGroup}>
+            <select
+              className={styles.selectFilter}
+              value={filtroCategoria}
+              onChange={(e) => setFiltroCategoria(e.target.value)}
+            >
+              <option value="todos">Todas las categorías</option>
+              <option value="monotributo">Monotributo</option>
+              <option value="responsable_inscripto">Responsables Inscriptos</option>
+              <option value="sociedad">Sociedades Comercial / S.A. / S.R.L.</option>
+            </select>
+          </div>
+
+          {hasFiltrosActivos && (
+            <button
+              type="button"
+              className={styles.resetFiltersPill}
+              onClick={resetAllFilters}
+              title="Limpiar todos los filtros"
+            >
+              <X size={14} />
+              <span>Limpiar Filtros</span>
+            </button>
+          )}
+
           <button
             type="button"
             className={styles.resetBtn}
             onClick={onResetMockData}
             title="Restablecer los 20 clientes iniciales"
           >
-            <RefreshCw size={15} />
+            <RefreshCw size={14} />
             <span>Restablecer Demo</span>
           </button>
 
@@ -188,6 +297,41 @@ export const ClienteList: React.FC<ClienteListProps> = ({
             <span>Nuevo Cliente</span>
           </button>
         </div>
+      </div>
+
+      {/* Indicador de Filtros Aplicados */}
+      <div className={styles.resultsSummaryBar}>
+        <span>
+          Mostrando <strong>{clientesFiltrados.length}</strong> de <strong>{totalClientes}</strong> clientes
+        </span>
+        {hasFiltrosActivos && (
+          <div className={styles.activePillsRow}>
+            {searchTerm && (
+              <span className={styles.activePill}>
+                Búsqueda: "{searchTerm}"
+                <X size={12} onClick={() => setSearchTerm('')} />
+              </span>
+            )}
+            {filtroTipo !== 'todos' && (
+              <span className={styles.activePill}>
+                Tipo: {filtroTipo === 'juridica' ? 'Jurídicas' : 'Físicas'}
+                <X size={12} onClick={() => setFiltroTipo('todos')} />
+              </span>
+            )}
+            {filtroEstado !== 'todos' && (
+              <span className={styles.activePill}>
+                Estado: {filtroEstado === 'activos' ? 'Activos' : 'En Baja'}
+                <X size={12} onClick={() => setFiltroEstado('todos')} />
+              </span>
+            )}
+            {filtroCategoria !== 'todos' && (
+              <span className={styles.activePill}>
+                Régimen: {filtroCategoria}
+                <X size={12} onClick={() => setFiltroCategoria('todos')} />
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
       {/* 3. Tabla Principal de Clientes */}
@@ -365,11 +509,7 @@ export const ClienteList: React.FC<ClienteListProps> = ({
                     <button
                       type="button"
                       className={styles.resetFiltersBtn}
-                      onClick={() => {
-                        setSearchTerm('');
-                        setFiltroTipo('todos');
-                        setFiltroEstado('todos');
-                      }}
+                      onClick={resetAllFilters}
                     >
                       Limpiar Filtros
                     </button>

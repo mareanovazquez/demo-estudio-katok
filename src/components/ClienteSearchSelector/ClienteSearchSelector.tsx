@@ -80,9 +80,11 @@ export const ClienteSearchSelector: React.FC<ClienteSearchSelectorProps> = ({
   const filteredClientes = availableClientes.filter((c) => {
     if (!query.trim()) return true;
     const q = query.toLowerCase().trim();
+    const qDigits = q.replace(/\D/g, '');
+    const matchCuit = qDigits ? c.cuit.replace(/\D/g, '').includes(qDigits) : c.cuit.toLowerCase().includes(q);
     return (
       c.razonSocial.toLowerCase().includes(q) ||
-      c.cuit.replace(/\D/g, '').includes(q.replace(/\D/g, '')) ||
+      matchCuit ||
       c.codigo.toLowerCase().includes(q)
     );
   });

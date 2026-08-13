@@ -14,19 +14,29 @@
 
 .kpiCard {
   background: #ffffff;
-  border: 1px solid var(--border-color, #e2e8f0);
+  border: 2px solid transparent;
   border-radius: 12px;
   padding: 1rem 1.25rem;
   display: flex;
   align-items: center;
   gap: 1rem;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
 }
 
 .kpiCard:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border-color: #cbd5e1;
+}
+
+.kpiCardActive {
+  border-color: #2563eb !important;
+  background-color: #f8fafc;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
 }
 
 .kpiIcon {
@@ -176,6 +186,26 @@
   outline: none;
 }
 
+.resetFiltersPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.75rem;
+  background-color: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  font-size: 0.78125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.resetFiltersPill:hover {
+  background-color: #fca5a5;
+  color: #7f1d1d;
+}
+
 .resetBtn {
   display: inline-flex;
   align-items: center;
@@ -215,6 +245,47 @@
 .btnNuevo:hover {
   background-color: #1e293b;
   transform: translateY(-1px);
+}
+
+/* Indicador de Filtros Aplicados */
+.resultsSummaryBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.8125rem;
+  color: #64748b;
+  padding: 0.25rem 0.5rem;
+}
+
+.activePillsRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.activePill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background-color: #eff6ff;
+  color: #1e40af;
+  border: 1px solid #bfdbfe;
+  padding: 0.2rem 0.6rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.activePill svg {
+  cursor: pointer;
+  color: #3b82f6;
+}
+
+.activePill svg:hover {
+  color: #1d4ed8;
 }
 
 /* 3. Tabla Principal */
