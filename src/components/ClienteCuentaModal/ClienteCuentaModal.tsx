@@ -8,6 +8,7 @@ import {
   History,
   CheckCircle2,
   Receipt,
+  MessageSquare,
 } from 'lucide-react';
 import styles from './ClienteCuentaModal.module.css';
 
@@ -16,29 +17,45 @@ interface ClienteCuentaModalProps {
   onClose: () => void;
 }
 
+export const MOTIVOS_CUENTA_LIST = [
+  { value: 'Honorarios', label: 'Honorarios Profesionales Estudio' },
+  { value: 'IVA', label: 'IVA (Débito/Crédito)' },
+  { value: 'IIBB / Convenio', label: 'Ingresos Brutos / Convenio Multilateral' },
+  { value: 'Monotributo', label: 'Monotributo (Cuota unificada)' },
+  { value: 'Ganancias', label: 'Impuesto a las Ganancias' },
+  { value: 'Autónomos', label: 'Autónomos / Jubilación' },
+  { value: 'Sueldos 931', label: 'Sueldos / Cargas Sociales (F.931)' },
+  { value: 'Bienes Personales', label: 'Bienes Personales' },
+  { value: 'Tasas Municipales', label: 'Tasas Municipales / Seguridad e Higiene' },
+  { value: 'Varios', label: 'Varios (Gastos Varios / Provisión General)' },
+  { value: 'Otro', label: 'Otro Concepto / Impuesto' },
+];
+
 export const ClienteCuentaModal: React.FC<ClienteCuentaModalProps> = ({
   cliente,
   onClose,
 }) => {
   const [activeTab, setActiveTab] = useState<'ingreso' | 'egreso' | 'historial'>('ingreso');
 
-  // Form para Ingreso
+  // Form para Ingreso (Entrada)
+  const [ingresoMotivo, setIngresoMotivo] = useState<string>('Honorarios');
   const [ingresoMonto, setIngresoMonto] = useState<string>('');
   const [ingresoFecha, setIngresoFecha] = useState<string>(
     new Date().toISOString().split('T')[0]
   );
-  const [ingresoConcepto, setIngresoConcepto] = useState<string>('Depósito de Provisión de Fondos');
+  const [ingresoPeriodo, setIngresoPeriodo] = useState<string>('');
   const [ingresoComprobante, setIngresoComprobante] = useState<string>('');
+  const [ingresoComentarios, setIngresoComentarios] = useState<string>('');
 
-  // Form para Egreso (Pago Impuestos)
-  const [egresoImpuesto, setEgresoImpuesto] = useState<string>('IVA');
+  // Form para Egreso (Salida / Pago)
+  const [egresoMotivo, setEgresoMotivo] = useState<string>('Honorarios');
   const [egresoMonto, setEgresoMonto] = useState<string>('');
   const [egresoFecha, setEgresoFecha] = useState<string>(
     new Date().toISOString().split('T')[0]
   );
   const [egresoPeriodo, setEgresoPeriodo] = useState<string>('');
   const [egresoComprobanteVEP, setEgresoComprobanteVEP] = useState<string>('');
-  const [egresoObservaciones, setEgresoObservaciones] = useState<string>('');
+  const [egresoComentarios, setEgresoComentarios] = useState<string>('');
 
   // Mensaje de éxito
   const [mensajeExito, setMensajeExito] = useState<string | null>(null);
@@ -54,17 +71,23 @@ export const ClienteCuentaModal: React.FC<ClienteCuentaModalProps> = ({
       return;
     }
 
+    const conceptoTexto = `Ingreso: ${ingresoMotivo}${ingresoPeriodo ? ` (${ingresoPeriodo})` : ''}`;
+
     clienteService.registrarMovimientoCuenta(cliente.id, {
       fecha: ingresoFecha,
       tipo: 'ingreso',
       monto: montoNum,
-      concepto: ingresoConcepto || 'Ingreso de dinero a la cuenta',
+      concepto: conceptoTexto,
+      impuestoNombre: ingresoMotivo,
       nroComprobanteVEP: ingresoComprobante || undefined,
+      observaciones: ingresoComentarios || undefined,
     });
 
     setIngresoMonto('');
+    setIngresoPeriodo('');
     setIngresoComprobante('');
-    setMensajeExito('¡Ingreso de dinero registrado exitosamente!');
+    setIngresoComentarios('');
+    setMensajeExito(`¡Ingreso por "${ingresoMotivo}" registrado exitosamente!`);
     setTimeout(() => setMensajeExito(null), 3000);
   };
 
@@ -76,23 +99,23 @@ export const ClienteCuentaModal: React.FC<ClienteCuentaModalProps> = ({
       return;
     }
 
-    const conceptoCompleto = `Pago ${egresoImpuesto}${egresoPeriodo ? ` (${egresoPeriodo})` : ''}`;
+    const conceptoTexto = `Egreso: ${egresoMotivo}${egresoPeriodo ? ` (${egresoPeriodo})` : ''}`;
 
     clienteService.registrarMovimientoCuenta(cliente.id, {
       fecha: egresoFecha,
       tipo: 'egreso_impuesto',
       monto: montoNum,
-      concepto: conceptoCompleto,
-      impuestoNombre: egresoImpuesto,
+      concepto: conceptoTexto,
+      impuestoNombre: egresoMotivo,
       nroComprobanteVEP: egresoComprobanteVEP || undefined,
-      observaciones: egresoObservaciones || undefined,
+      observaciones: egresoComentarios || undefined,
     });
 
     setEgresoMonto('');
     setEgresoPeriodo('');
     setEgresoComprobanteVEP('');
-    setEgresoObservaciones('');
-    setMensajeExito(`¡Pago de impuesto ${egresoImpuesto} registrado exitosamente!`);
+    setEgresoComentarios('');
+    setMensajeExito(`¡Egreso por "${egresoMotivo}" registrado exitosamente!`);
     setTimeout(() => setMensajeExito(null), 3000);
   };
 
@@ -161,7 +184,7 @@ export const ClienteCuentaModal: React.FC<ClienteCuentaModalProps> = ({
             onClick={() => setActiveTab('egreso')}
           >
             <ArrowUpRight size={16} />
-            <span>Pago de Impuesto</span>
+            <span>Egreso / Pago Impuesto</span>
           </button>
 
           <button
@@ -202,6 +225,22 @@ export const ClienteCuentaModal: React.FC<ClienteCuentaModalProps> = ({
           {activeTab === 'ingreso' && (
             <form onSubmit={handleSubmitedIngreso} className={styles.formGrid}>
               <div className={styles.fieldGroup}>
+                <label className={styles.fieldLabel}>Motivo de Ingreso *</label>
+                <select
+                  className={styles.fieldSelect}
+                  value={ingresoMotivo}
+                  onChange={(e) => setIngresoMotivo(e.target.value)}
+                  required
+                >
+                  {MOTIVOS_CUENTA_LIST.map((m) => (
+                    <option key={`ing-${m.value}`} value={m.value}>
+                      {m.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className={styles.fieldGroup}>
                 <label className={styles.fieldLabel}>Monto a Ingresar ($) *</label>
                 <div className={styles.amountWrapper}>
                   <span className={styles.currencyPrefix}>$</span>
@@ -220,24 +259,23 @@ export const ClienteCuentaModal: React.FC<ClienteCuentaModalProps> = ({
               </div>
 
               <div className={styles.fieldGroup}>
+                <label className={styles.fieldLabel}>Período / Detalle (opcional)</label>
+                <input
+                  type="text"
+                  className={styles.fieldInput}
+                  placeholder="Ej: Periodo 07/2026 u Honorarios Mes"
+                  value={ingresoPeriodo}
+                  onChange={(e) => setIngresoPeriodo(e.target.value)}
+                />
+              </div>
+
+              <div className={styles.fieldGroup}>
                 <label className={styles.fieldLabel}>Fecha de Movimiento *</label>
                 <input
                   type="date"
                   className={styles.fieldInput}
                   value={ingresoFecha}
                   onChange={(e) => setIngresoFecha(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className={`${styles.fieldGroup} ${styles.fullWidth}`}>
-                <label className={styles.fieldLabel}>Concepto / Motivo *</label>
-                <input
-                  type="text"
-                  className={styles.fieldInput}
-                  placeholder="Ej: Depósito provisión de fondos, Transferencia recibida..."
-                  value={ingresoConcepto}
-                  onChange={(e) => setIngresoConcepto(e.target.value)}
                   required
                 />
               </div>
@@ -255,6 +293,19 @@ export const ClienteCuentaModal: React.FC<ClienteCuentaModalProps> = ({
                 />
               </div>
 
+              <div className={`${styles.fieldGroup} ${styles.fullWidth}`}>
+                <label className={styles.fieldLabel}>
+                  Comentarios / Observaciones asociadas (opcional)
+                </label>
+                <input
+                  type="text"
+                  className={styles.fieldInput}
+                  placeholder="Escriba aquí cualquier comentario o aclaración sobre este ingreso..."
+                  value={ingresoComentarios}
+                  onChange={(e) => setIngresoComentarios(e.target.value)}
+                />
+              </div>
+
               <div className={styles.fullWidth}>
                 <button type="submit" className={styles.submitBtnIngreso}>
                   <ArrowDownRight size={18} />
@@ -264,31 +315,27 @@ export const ClienteCuentaModal: React.FC<ClienteCuentaModalProps> = ({
             </form>
           )}
 
-          {/* TAB 2: PAGO DE IMPUESTO (EGRESO) */}
+          {/* TAB 2: PAGO / EGRESO */}
           {activeTab === 'egreso' && (
             <form onSubmit={handleSubmitedEgreso} className={styles.formGrid}>
               <div className={styles.fieldGroup}>
-                <label className={styles.fieldLabel}>Impuesto a Abonar *</label>
+                <label className={styles.fieldLabel}>Motivo de Egreso / Pago *</label>
                 <select
                   className={styles.fieldSelect}
-                  value={egresoImpuesto}
-                  onChange={(e) => setEgresoImpuesto(e.target.value)}
+                  value={egresoMotivo}
+                  onChange={(e) => setEgresoMotivo(e.target.value)}
                   required
                 >
-                  <option value="IVA">IVA (Débito/Crédito)</option>
-                  <option value="IIBB / Convenio">Ingresos Brutos / Convenio Multilateral</option>
-                  <option value="Monotributo">Monotributo (Cuota unificada)</option>
-                  <option value="Ganancias">Impuesto a las Ganancias</option>
-                  <option value="Autónomos">Autónomos / Jubilación</option>
-                  <option value="Sueldos 931">Sueldos / Cargas Sociales (F.931)</option>
-                  <option value="Bienes Personales">Bienes Personales</option>
-                  <option value="Tasas Municipales">Tasas Municipales / Seguridad e Higiene</option>
-                  <option value="Otro Impuesto">Otro Impuesto / Tasa</option>
+                  {MOTIVOS_CUENTA_LIST.map((m) => (
+                    <option key={`egr-${m.value}`} value={m.value}>
+                      {m.label}
+                    </option>
+                  ))}
                 </select>
               </div>
 
               <div className={styles.fieldGroup}>
-                <label className={styles.fieldLabel}>Monto del Pago / VEP ($) *</label>
+                <label className={styles.fieldLabel}>Monto del Egreso ($) *</label>
                 <div className={styles.amountWrapper}>
                   <span className={styles.currencyPrefix}>$</span>
                   <input
@@ -310,14 +357,14 @@ export const ClienteCuentaModal: React.FC<ClienteCuentaModalProps> = ({
                 <input
                   type="text"
                   className={styles.fieldInput}
-                  placeholder="Ej: Periodo 07/2026 o Anticipo 2"
+                  placeholder="Ej: Periodo 07/2026 o Cuota 2"
                   value={egresoPeriodo}
                   onChange={(e) => setEgresoPeriodo(e.target.value)}
                 />
               </div>
 
               <div className={styles.fieldGroup}>
-                <label className={styles.fieldLabel}>Fecha de Pago *</label>
+                <label className={styles.fieldLabel}>Fecha de Movimiento *</label>
                 <input
                   type="date"
                   className={styles.fieldInput}
@@ -334,27 +381,29 @@ export const ClienteCuentaModal: React.FC<ClienteCuentaModalProps> = ({
                 <input
                   type="text"
                   className={styles.fieldInput}
-                  placeholder="Ej: VEP N° 458912389 o Ticket de Pago Interbanking"
+                  placeholder="Ej: VEP N° 458912389 o Ticket de Pago"
                   value={egresoComprobanteVEP}
                   onChange={(e) => setEgresoComprobanteVEP(e.target.value)}
                 />
               </div>
 
               <div className={`${styles.fieldGroup} ${styles.fullWidth}`}>
-                <label className={styles.fieldLabel}>Observaciones (opcional)</label>
+                <label className={styles.fieldLabel}>
+                  Comentarios / Observaciones asociadas (opcional)
+                </label>
                 <input
                   type="text"
                   className={styles.fieldInput}
-                  placeholder="Notas adicionales..."
-                  value={egresoObservaciones}
-                  onChange={(e) => setEgresoObservaciones(e.target.value)}
+                  placeholder="Escriba aquí cualquier comentario o aclaración sobre este egreso..."
+                  value={egresoComentarios}
+                  onChange={(e) => setEgresoComentarios(e.target.value)}
                 />
               </div>
 
               <div className={styles.fullWidth}>
                 <button type="submit" className={styles.submitBtnEgreso}>
                   <ArrowUpRight size={18} />
-                  <span>Registrar Pago de Impuesto</span>
+                  <span>Registrar Egreso de Cuenta</span>
                 </button>
               </div>
             </form>
@@ -370,8 +419,9 @@ export const ClienteCuentaModal: React.FC<ClienteCuentaModalProps> = ({
                       <tr>
                         <th>Fecha</th>
                         <th>Tipo</th>
-                        <th>Concepto / Impuesto</th>
+                        <th>Motivo / Detalle</th>
                         <th>Comprobante / VEP</th>
+                        <th>Comentarios</th>
                         <th style={{ textAlign: 'right' }}>Monto</th>
                       </tr>
                     </thead>
@@ -386,19 +436,32 @@ export const ClienteCuentaModal: React.FC<ClienteCuentaModalProps> = ({
                               </span>
                             ) : (
                               <span className={styles.typeBadgeEgreso}>
-                                <ArrowUpRight size={12} /> Pago Impuesto
+                                <ArrowUpRight size={12} /> Egreso
                               </span>
                             )}
                           </td>
                           <td>
                             <strong>{mov.concepto}</strong>
-                            {mov.observaciones && (
-                              <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                                {mov.observaciones}
-                              </div>
-                            )}
                           </td>
                           <td>{mov.nroComprobanteVEP || '—'}</td>
+                          <td>
+                            {mov.observaciones ? (
+                              <span
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '0.25rem',
+                                  color: '#475569',
+                                  fontSize: '0.78125rem',
+                                }}
+                              >
+                                <MessageSquare size={12} />
+                                {mov.observaciones}
+                              </span>
+                            ) : (
+                              '—'
+                            )}
+                          </td>
                           <td
                             style={{ textAlign: 'right' }}
                             className={
@@ -421,7 +484,7 @@ export const ClienteCuentaModal: React.FC<ClienteCuentaModalProps> = ({
                     Sin movimientos registrados
                   </p>
                   <p style={{ fontSize: '0.8125rem', marginTop: '0.25rem' }}>
-                    Utiliza los botones superiores para registrar ingresos de dinero o pagos de impuestos.
+                    Utiliza los botones superiores para registrar ingresos o egresos en esta cuenta.
                   </p>
                 </div>
               )}
