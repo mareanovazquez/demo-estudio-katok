@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { Cliente } from '../../types/cliente';
 import {
   Search,
@@ -112,6 +112,30 @@ export const ClienteList: React.FC<ClienteListProps> = ({
     setFiltroCategoria('todos');
   };
 
+  // Abrir modal solo si la búsqueda/filtro arroja exactamente 1 resultado al presionar Enter
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && clienteDetalle) {
+        setClienteDetalle(null);
+        return;
+      }
+
+      if (e.key === 'Enter' && clientesFiltrados.length === 1 && !clienteDetalle) {
+        const activeEl = document.activeElement;
+        const tagName = activeEl?.tagName.toUpperCase();
+
+        // Si el usuario está sobre un botón explícito, no interferir con la acción del botón
+        if (tagName === 'BUTTON') return;
+
+        e.preventDefault();
+        setClienteDetalle(clientesFiltrados[0]);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [clientesFiltrados, clienteDetalle]);
+
   return (
     <div className={styles.container}>
       {/* 1. Tarjetas KPI de Métricas Interactivos */}
@@ -219,6 +243,15 @@ export const ClienteList: React.FC<ClienteListProps> = ({
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
+          {clientesFiltrados.length === 1 && !clienteDetalle && (
+            <span
+              className={styles.enterHintBadge}
+              style={{ right: searchTerm ? '2.35rem' : '0.75rem' }}
+              title="Presiona Enter para abrir la ficha de este cliente"
+            >
+              ↵ Enter
+            </span>
+          )}
           {searchTerm && (
             <button
               type="button"
@@ -301,9 +334,16 @@ export const ClienteList: React.FC<ClienteListProps> = ({
 
       {/* Indicador de Filtros Aplicados */}
       <div className={styles.resultsSummaryBar}>
-        <span>
-          Mostrando <strong>{clientesFiltrados.length}</strong> de <strong>{totalClientes}</strong> clientes
-        </span>
+        <div className={styles.summaryLeftGroup}>
+          <span>
+            Mostrando <strong>{clientesFiltrados.length}</strong> de <strong>{totalClientes}</strong> clientes
+          </span>
+          {clientesFiltrados.length === 1 && !clienteDetalle && (
+            <span className={styles.singleResultNotice}>
+              ↵ Presiona <strong>Enter</strong> para ver ficha
+            </span>
+          )}
+        </div>
         {hasFiltrosActivos && (
           <div className={styles.activePillsRow}>
             {searchTerm && (
