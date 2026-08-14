@@ -122,7 +122,7 @@ export const ClienteSearchSelector: React.FC<ClienteSearchSelectorProps> = ({
                 setQuery('');
                 onClear();
               }}
-              title="Quitar cliente seleccionado"
+              data-tooltip="Quitar cliente seleccionado"
               aria-label="Quitar selección"
             >
               <X size={16} />

@@ -448,7 +448,7 @@ export const ClienteCuentaModal: React.FC<ClienteCuentaModalProps> = ({
                         type="button"
                         className={styles.btnRemoveItem}
                         onClick={() => handleRemoveEgresoItem(item.id)}
-                        title="Eliminar concepto"
+                        data-tooltip="Eliminar concepto"
                       >
                         <Trash2 size={16} />
                       </button>

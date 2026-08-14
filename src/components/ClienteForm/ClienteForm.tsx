@@ -302,7 +302,7 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({
               <span className={styles.tabIcon}>{tab.icon}</span>
               <span className={styles.tabLabel}>{tab.label}</span>
               {tabErrors > 0 && (
-                <span className={styles.tabErrorBadge} title={`${tabErrors} errores en esta sección`}>
+                <span className={styles.tabErrorBadge} data-tooltip={`${tabErrors} errores en esta sección`}>
                   {tabErrors}
                 </span>
               )}
@@ -388,7 +388,7 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({
                   }}
                 />
                 {isCuitValid && (
-                  <span className={styles.cuitValidBadge} title="Dígito verificador válido">
+                  <span className={styles.cuitValidBadge} data-tooltip="Dígito verificador válido">
                     <CheckCircle2 size={16} />
                   </span>
                 )}
@@ -458,7 +458,7 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({
                   type="button"
                   className={styles.inlineActionBtn}
                   onClick={copyDomicilio}
-                  title="Copiar domicilio real"
+                  data-tooltip="Copiar domicilio real"
                 >
                   <Copy size={13} />
                   <span>Igual al real</span>
@@ -1200,7 +1200,7 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({
                         type="button"
                         className={styles.deleteRelationBtn}
                         onClick={() => remove(index)}
-                        title="Eliminar este vínculo"
+                        data-tooltip="Eliminar este vínculo"
                       >
                         <Trash2 size={16} />
                         <span>Quitar</span>

@@ -250,7 +250,7 @@ export const ClienteList: React.FC<ClienteListProps> = ({
             <span
               className={styles.enterHintBadge}
               style={{ right: searchTerm ? '2.35rem' : '0.75rem' }}
-              title="Presiona Enter para abrir la ficha de este cliente"
+              data-tooltip="Presiona Enter para abrir la ficha de este cliente"
             >
               ↵ Enter
             </span>
@@ -260,7 +260,7 @@ export const ClienteList: React.FC<ClienteListProps> = ({
               type="button"
               className={styles.clearSearchBtn}
               onClick={() => setSearchTerm('')}
-              title="Limpiar búsqueda"
+              data-tooltip="Limpiar búsqueda"
             >
               <X size={14} />
             </button>
@@ -311,7 +311,7 @@ export const ClienteList: React.FC<ClienteListProps> = ({
               type="button"
               className={styles.resetFiltersPill}
               onClick={resetAllFilters}
-              title="Limpiar todos los filtros"
+              data-tooltip="Limpiar todos los filtros"
             >
               <X size={14} />
               <span>Limpiar Filtros</span>
@@ -322,7 +322,7 @@ export const ClienteList: React.FC<ClienteListProps> = ({
             type="button"
             className={styles.resetBtn}
             onClick={onResetMockData}
-            title="Restablecer los 20 clientes iniciales"
+            data-tooltip="Restablecer los 20 clientes iniciales"
           >
             <RefreshCw size={14} />
             <span>Restablecer Demo</span>
@@ -474,13 +474,13 @@ export const ClienteList: React.FC<ClienteListProps> = ({
 
                   <td className={styles.tdContacto}>
                     {cliente.email && (
-                      <div className={styles.contactItem} title={cliente.email}>
+                      <div className={styles.contactItem} data-tooltip={cliente.email}>
                         <Mail size={13} />
                         <span className={styles.contactText}>{cliente.email}</span>
                       </div>
                     )}
                     {cliente.celularWhatsapp && (
-                      <div className={styles.contactItem} title={cliente.celularWhatsapp}>
+                      <div className={styles.contactItem} data-tooltip={cliente.celularWhatsapp}>
                         <Phone size={13} />
                         <span className={styles.contactText}>
                           {cliente.celularWhatsapp}
@@ -507,7 +507,7 @@ export const ClienteList: React.FC<ClienteListProps> = ({
                         type="button"
                         className={`${styles.actionBtn} ${styles.btnVer}`}
                         onClick={() => setClienteDetalle(cliente)}
-                        title="Ver Ficha Completa"
+                        data-tooltip="Ver Ficha Completa"
                       >
                         <Eye size={15} />
                       </button>
@@ -516,17 +516,17 @@ export const ClienteList: React.FC<ClienteListProps> = ({
                         type="button"
                         className={`${styles.actionBtn} ${styles.btnCuenta}`}
                         onClick={() => setClienteCuenta(cliente)}
-                        title="Cuenta Corriente & Pago de Impuestos"
+                        data-tooltip="Cuenta Corriente & Pago de Impuestos"
                       >
                         <Wallet size={15} />
-                        <span></span>
+                        <span>Cuenta</span>
                       </button>
 
                       <button
                         type="button"
                         className={`${styles.actionBtn} ${styles.btnEditar}`}
                         onClick={() => onSelectEditar(cliente)}
-                        title="Editar cliente en el formulario"
+                        data-tooltip="Editar cliente en el formulario"
                       >
                         <Edit3 size={15} />
                       </button>
@@ -537,7 +537,7 @@ export const ClienteList: React.FC<ClienteListProps> = ({
                           cliente.esBaja ? styles.btnReactivar : styles.btnBaja
                         }`}
                         onClick={() => onToggleBaja(cliente.id)}
-                        title={
+                        data-tooltip={
                           cliente.esBaja
                             ? 'Reactivar cliente'
                             : 'Marcar como baja en el sistema'
