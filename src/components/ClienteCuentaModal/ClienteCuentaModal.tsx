@@ -13,6 +13,7 @@ import {
   Trash2,
   AlertTriangle,
   ListPlus,
+  Loader2,
 } from 'lucide-react';
 import styles from './ClienteCuentaModal.module.css';
 
@@ -48,13 +49,31 @@ export const ClienteCuentaModal: React.FC<ClienteCuentaModalProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'ingreso' | 'egreso' | 'historial'>('ingreso');
 
-  // --- Form 1: Ingresar Dinero (Monto Global sin conceptos fijos) ---
+  const saldoActual = cliente.saldoCuenta || 0;
+  const movimientos = cliente.movimientosCuenta || [];
+
+  // Conceptos que ya tienen al menos un ingreso cargado en el historial
+  // (se usa para restringir el desglose de egresos a esos conceptos)
+  const conceptosConIngresoSet = new Set<string>();
+  movimientos.forEach((mov) => {
+    if (mov.tipo === 'ingreso' && mov.items) {
+      mov.items.forEach((it) => conceptosConIngresoSet.add(it.motivo));
+    }
+  });
+  const conceptosConIngreso = MOTIVOS_CUENTA_LIST.filter((m) =>
+    conceptosConIngresoSet.has(m.value)
+  );
+
+  // --- Form 1: Ingresar Dinero (Monto Total + Desglose 1 a N de Conceptos) ---
   const [ingresoMonto, setIngresoMonto] = useState<string>('');
   const [ingresoFecha, setIngresoFecha] = useState<string>(
     new Date().toISOString().split('T')[0]
   );
   const [ingresoComprobante, setIngresoComprobante] = useState<string>('');
   const [ingresoComentarios, setIngresoComentarios] = useState<string>('');
+  const [ingresoItems, setIngresoItems] = useState<FormItemState[]>([
+    { id: `item-ing-${Date.now()}-1`, motivo: 'Honorarios', monto: '', periodoDetalle: '' },
+  ]);
 
   // --- Form 2: Egreso / Pago (Monto Total + Desglose 1 a N de Conceptos) ---
   const [egresoMontoTotal, setEgresoMontoTotal] = useState<string>('');
@@ -64,18 +83,76 @@ export const ClienteCuentaModal: React.FC<ClienteCuentaModalProps> = ({
   const [egresoComprobanteVEP, setEgresoComprobanteVEP] = useState<string>('');
   const [egresoComentarios, setEgresoComentarios] = useState<string>('');
   const [egresoItems, setEgresoItems] = useState<FormItemState[]>([
-    { id: `item-${Date.now()}-1`, motivo: 'Honorarios', monto: '', periodoDetalle: '' },
+    {
+      id: `item-egr-${Date.now()}-1`,
+      motivo: conceptosConIngreso[0]?.value || '',
+      monto: '',
+      periodoDetalle: '',
+    },
   ]);
 
   // Mensaje de éxito
   const [mensajeExito, setMensajeExito] = useState<string | null>(null);
 
-  const saldoActual = cliente.saldoCuenta || 0;
-  const movimientos = cliente.movimientosCuenta || [];
+  // Estados de carga (spinner en botón de confirmar mientras se procesa el movimiento)
+  const [isSubmittingIngreso, setIsSubmittingIngreso] = useState(false);
+  const [isSubmittingEgreso, setIsSubmittingEgreso] = useState(false);
 
-  // --- Helpers de validación para Ingreso ---
+  // --- Helper para obtener saldo de ingresos por concepto ---
+  const getSaldoPorConcepto = (concept: string) => {
+    let totalIngresos = 0;
+    let totalEgresos = 0;
+    movimientos.forEach((mov) => {
+      if (mov.items && mov.items.length > 0) {
+        mov.items.forEach((it) => {
+          if (it.motivo === concept) {
+            if (mov.tipo === 'ingreso') {
+              totalIngresos += it.monto;
+            } else {
+              totalEgresos += it.monto;
+            }
+          }
+        });
+      }
+    });
+    return totalIngresos - totalEgresos;
+  };
+
+  // --- Helpers de cálculo y validación de desglosado para Ingreso ---
+  const sumaIngresoItems = ingresoItems.reduce(
+    (acc, it) => acc + (parseFloat(it.monto) || 0),
+    0
+  );
   const totalIngresoOperacion = parseFloat(ingresoMonto) || 0;
-  const isIngresoValido = totalIngresoOperacion > 0;
+  const difIngreso = Math.abs(totalIngresoOperacion - sumaIngresoItems);
+  const isIngresoValido =
+    totalIngresoOperacion > 0 &&
+    ingresoItems.length > 0 &&
+    difIngreso < 0.01 &&
+    ingresoItems.every((i) => parseFloat(i.monto) > 0);
+
+  // Manipulación de filas desglosadas en Ingreso
+  const handleAddIngresoItem = () => {
+    setIngresoItems((prev) => [
+      ...prev,
+      { id: `item-ing-${Date.now()}-${prev.length + 1}`, motivo: 'IVA', monto: '', periodoDetalle: '' },
+    ]);
+  };
+
+  const handleRemoveIngresoItem = (id: string) => {
+    if (ingresoItems.length <= 1) return;
+    setIngresoItems((prev) => prev.filter((it) => it.id !== id));
+  };
+
+  const handleUpdateIngresoItem = (
+    id: string,
+    field: keyof FormItemState,
+    value: string
+  ) => {
+    setIngresoItems((prev) =>
+      prev.map((it) => (it.id === id ? { ...it, [field]: value } : it))
+    );
+  };
 
   // --- Helpers de cálculo y validación de desglosado para Egreso ---
   const sumaEgresoItems = egresoItems.reduce(
@@ -88,13 +165,18 @@ export const ClienteCuentaModal: React.FC<ClienteCuentaModalProps> = ({
     totalEgresoOperacion > 0 &&
     egresoItems.length > 0 &&
     difEgreso < 0.01 &&
-    egresoItems.every((i) => parseFloat(i.monto) > 0);
+    egresoItems.every((i) => parseFloat(i.monto) > 0 && i.motivo);
 
   // Manipulación de filas desglosadas en Egreso
   const handleAddEgresoItem = () => {
     setEgresoItems((prev) => [
       ...prev,
-      { id: `item-${Date.now()}-${prev.length + 1}`, motivo: 'IVA', monto: '', periodoDetalle: '' },
+      {
+        id: `item-egr-${Date.now()}-${prev.length + 1}`,
+        motivo: conceptosConIngreso[0]?.value || '',
+        monto: '',
+        periodoDetalle: '',
+      },
     ]);
   };
 
@@ -113,37 +195,91 @@ export const ClienteCuentaModal: React.FC<ClienteCuentaModalProps> = ({
     );
   };
 
-  // Submit Ingreso (Entrada Global)
+  // Submit Ingreso (Entrada con Desglose 1-N)
   const handleSubmitedIngreso = (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmittingIngreso) return;
     if (!isIngresoValido) {
-      alert('Por favor ingrese un monto válido mayor a 0');
+      alert('La suma de los conceptos desglosados debe ser exactamente igual al monto total del ingreso.');
       return;
     }
 
-    clienteService.registrarMovimientoCuenta(cliente.id, {
-      fecha: ingresoFecha,
-      tipo: 'ingreso',
-      monto: totalIngresoOperacion,
-      concepto: 'Ingreso de fondos / Depósito',
-      nroComprobanteVEP: ingresoComprobante || undefined,
-      observaciones: ingresoComentarios || undefined,
-    });
+    setIsSubmittingIngreso(true);
 
-    setIngresoMonto('');
-    setIngresoComprobante('');
-    setIngresoComentarios('');
-    setMensajeExito(`¡Ingreso de dinero por ${formatCurrency(totalIngresoOperacion)} registrado exitosamente!`);
-    setTimeout(() => setMensajeExito(null), 3500);
+    const itemsDesglose: ItemDesgloseMovimiento[] = ingresoItems.map((it) => ({
+      id: it.id,
+      motivo: it.motivo,
+      monto: parseFloat(it.monto) || 0,
+      periodoDetalle: it.periodoDetalle || undefined,
+    }));
+
+    const motivosResumen = Array.from(new Set(itemsDesglose.map((i) => i.motivo))).join(', ');
+    const conceptoTexto = `Ingreso: ${motivosResumen}`;
+
+    setTimeout(() => {
+      clienteService.registrarMovimientoCuenta(cliente.id, {
+        fecha: ingresoFecha,
+        tipo: 'ingreso',
+        monto: totalIngresoOperacion,
+        concepto: conceptoTexto,
+        items: itemsDesglose,
+        nroComprobanteVEP: ingresoComprobante || undefined,
+        observaciones: ingresoComentarios || undefined,
+      });
+
+      setIngresoMonto('');
+      setIngresoComprobante('');
+      setIngresoComentarios('');
+      setIngresoItems([
+        { id: `item-ing-${Date.now()}-1`, motivo: 'Honorarios', monto: '', periodoDetalle: '' },
+      ]);
+      setIsSubmittingIngreso(false);
+      setMensajeExito(`¡Ingreso de dinero por ${formatCurrency(totalIngresoOperacion)} registrado exitosamente!`);
+      setTimeout(() => setMensajeExito(null), 3500);
+    }, 500);
   };
 
-  // Submit Egreso (Salida con Desglose 1-N)
+  // Submit Egreso (Salida con Desglose 1-N y validación contra saldo de ingresos)
   const handleSubmitedEgreso = (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmittingEgreso) return;
     if (!isEgresoValido) {
       alert('La suma de los conceptos desglosados debe ser exactamente igual al monto total del egreso.');
       return;
     }
+
+    // Verificar si hay desvíos con respecto a los saldos por concepto
+    const desvios = egresoItems
+      .map((it) => {
+        const montoConcepto = parseFloat(it.monto) || 0;
+        const saldoConcepto = getSaldoPorConcepto(it.motivo);
+        if (Math.abs(montoConcepto - saldoConcepto) >= 0.01) {
+          return {
+            motivo: it.motivo,
+            monto: montoConcepto,
+            saldo: saldoConcepto,
+          };
+        }
+        return null;
+      })
+      .filter((d) => d !== null);
+
+    if (desvios.length > 0) {
+      const msg = desvios
+        .map(
+          (d) =>
+            `- ${d!.motivo}: Egreso de ${formatCurrency(d!.monto)} vs Ingreso de ${formatCurrency(d!.saldo)}`
+        )
+        .join('\n');
+      const confirmar = window.confirm(
+        `Advertencia: Hay conceptos cuyos montos no coinciden con el ingreso acumulado registrado:\n\n${msg}\n\n¿Desea registrar el egreso de todas formas?`
+      );
+      if (!confirmar) {
+        return;
+      }
+    }
+
+    setIsSubmittingEgreso(true);
 
     const itemsDesglose: ItemDesgloseMovimiento[] = egresoItems.map((it) => ({
       id: it.id,
@@ -155,24 +291,32 @@ export const ClienteCuentaModal: React.FC<ClienteCuentaModalProps> = ({
     const motivosResumen = Array.from(new Set(itemsDesglose.map((i) => i.motivo))).join(', ');
     const conceptoTexto = `Egreso: ${motivosResumen}`;
 
-    clienteService.registrarMovimientoCuenta(cliente.id, {
-      fecha: egresoFecha,
-      tipo: 'egreso_impuesto',
-      monto: totalEgresoOperacion,
-      concepto: conceptoTexto,
-      items: itemsDesglose,
-      nroComprobanteVEP: egresoComprobanteVEP || undefined,
-      observaciones: egresoComentarios || undefined,
-    });
+    setTimeout(() => {
+      clienteService.registrarMovimientoCuenta(cliente.id, {
+        fecha: egresoFecha,
+        tipo: 'egreso_impuesto',
+        monto: totalEgresoOperacion,
+        concepto: conceptoTexto,
+        items: itemsDesglose,
+        nroComprobanteVEP: egresoComprobanteVEP || undefined,
+        observaciones: egresoComentarios || undefined,
+      });
 
-    setEgresoMontoTotal('');
-    setEgresoComprobanteVEP('');
-    setEgresoComentarios('');
-    setEgresoItems([
-      { id: `item-${Date.now()}-1`, motivo: 'Honorarios', monto: '', periodoDetalle: '' },
-    ]);
-    setMensajeExito(`¡Egreso por ${formatCurrency(totalEgresoOperacion)} registrado exitosamente!`);
-    setTimeout(() => setMensajeExito(null), 3500);
+      setEgresoMontoTotal('');
+      setEgresoComprobanteVEP('');
+      setEgresoComentarios('');
+      setEgresoItems([
+        {
+          id: `item-egr-${Date.now()}-1`,
+          motivo: conceptosConIngreso[0]?.value || '',
+          monto: '',
+          periodoDetalle: '',
+        },
+      ]);
+      setIsSubmittingEgreso(false);
+      setMensajeExito(`¡Egreso por ${formatCurrency(totalEgresoOperacion)} registrado exitosamente!`);
+      setTimeout(() => setMensajeExito(null), 3500);
+    }, 500);
   };
 
   const formatCurrency = (val: number) => {
@@ -277,11 +421,11 @@ export const ClienteCuentaModal: React.FC<ClienteCuentaModalProps> = ({
 
         {/* Modal Body */}
         <div className={styles.modalBody}>
-          {/* TAB 1: INGRESAR DINERO (Ingreso Global) */}
+          {/* TAB 1: INGRESAR DINERO (Ingreso con Desglose 1-N) */}
           {activeTab === 'ingreso' && (
             <form onSubmit={handleSubmitedIngreso} className={styles.formGrid}>
               <div className={styles.fieldGroup}>
-                <label className={styles.fieldLabel}>Monto a Ingresar ($) *</label>
+                <label className={styles.fieldLabel}>Monto Total del Ingreso ($) *</label>
                 <div className={styles.amountWrapper}>
                   <span className={styles.currencyPrefix}>$</span>
                   <input
@@ -308,6 +452,110 @@ export const ClienteCuentaModal: React.FC<ClienteCuentaModalProps> = ({
                   required
                 />
               </div>
+
+              {/* SECCIÓN DESGLOSE DE CONCEPTOS / IMPUESTOS (1 a N) PARA INGRESO */}
+              <div className={styles.desgloseSection}>
+                <div className={styles.desgloseHeader}>
+                  <h4 className={styles.desgloseTitle}>
+                    <ListPlus size={16} /> Desglose de Conceptos / Impuestos (1 a N)
+                  </h4>
+                  <button
+                    type="button"
+                    className={styles.btnAgregarItem}
+                    onClick={handleAddIngresoItem}
+                  >
+                    <Plus size={14} />
+                    <span>Agregar Concepto</span>
+                  </button>
+                </div>
+
+                {ingresoItems.map((item) => (
+                  <div key={item.id} className={styles.desgloseRow}>
+                    <select
+                      className={styles.fieldSelect}
+                      value={item.motivo}
+                      onChange={(e) =>
+                        handleUpdateIngresoItem(item.id, 'motivo', e.target.value)
+                      }
+                      required
+                    >
+                      {MOTIVOS_CUENTA_LIST.map((m) => (
+                        <option key={`ing-${item.id}-${m.value}`} value={m.value}>
+                          {m.label}
+                        </option>
+                      ))}
+                    </select>
+
+                    <div className={styles.amountWrapper}>
+                      <span className={styles.currencyPrefix}>$</span>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0.01"
+                        className={`${styles.fieldInput} ${styles.amountInput}`}
+                        placeholder="Monto"
+                        value={item.monto}
+                        onChange={(e) =>
+                          handleUpdateIngresoItem(item.id, 'monto', e.target.value)
+                        }
+                        required
+                      />
+                    </div>
+
+                    <input
+                      type="text"
+                      className={styles.fieldInput}
+                      placeholder="Período/Detalle (ej: 07/2026)"
+                      value={item.periodoDetalle}
+                      onChange={(e) =>
+                        handleUpdateIngresoItem(item.id, 'periodoDetalle', e.target.value)
+                      }
+                    />
+
+                    {ingresoItems.length > 1 && (
+                      <button
+                        type="button"
+                        className={styles.btnRemoveItem}
+                        onClick={() => handleRemoveIngresoItem(item.id)}
+                        data-tooltip="Eliminar concepto"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* BANNER DE VALIDACIÓN DE SUMA PARA INGRESO */}
+              {totalIngresoOperacion > 0 && (
+                <div
+                  className={`${styles.validationBanner} ${
+                    isIngresoValido
+                      ? styles.validationSuccess
+                      : styles.validationError
+                  }`}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    {isIngresoValido ? (
+                      <CheckCircle2 size={18} />
+                    ) : (
+                      <AlertTriangle size={18} />
+                    )}
+                    <span>
+                      {isIngresoValido
+                        ? '¡El desglose coincide perfectamente con el Monto Total!'
+                        : `La suma de conceptos (${formatCurrency(
+                            sumaIngresoItems
+                          )}) no coincide con el Monto Total (${formatCurrency(
+                            totalIngresoOperacion
+                          )})`}
+                    </span>
+                  </div>
+                  {!isIngresoValido && (
+                    <span>Diferencia: {formatCurrency(difIngreso)}</span>
+                  )}
+                </div>
+              )}
 
               <div className={`${styles.fieldGroup} ${styles.fullWidth}`}>
                 <label className={styles.fieldLabel}>
@@ -339,14 +587,18 @@ export const ClienteCuentaModal: React.FC<ClienteCuentaModalProps> = ({
                 <button
                   type="submit"
                   className={styles.submitBtnIngreso}
-                  disabled={!isIngresoValido}
+                  disabled={!isIngresoValido || isSubmittingIngreso}
                   style={{
-                    opacity: isIngresoValido ? 1 : 0.5,
-                    cursor: isIngresoValido ? 'pointer' : 'not-allowed',
+                    opacity: isIngresoValido && !isSubmittingIngreso ? 1 : 0.5,
+                    cursor: isIngresoValido && !isSubmittingIngreso ? 'pointer' : 'not-allowed',
                   }}
                 >
-                  <ArrowDownRight size={18} />
-                  <span>Confirmar Ingreso a Cuenta</span>
+                  {isSubmittingIngreso ? (
+                    <Loader2 size={18} className={styles.spinnerIcon} />
+                  ) : (
+                    <ArrowDownRight size={18} />
+                  )}
+                  <span>{isSubmittingIngreso ? 'Procesando...' : 'Confirmar Ingreso a Cuenta'}</span>
                 </button>
               </div>
             </form>
@@ -394,67 +646,102 @@ export const ClienteCuentaModal: React.FC<ClienteCuentaModalProps> = ({
                     type="button"
                     className={styles.btnAgregarItem}
                     onClick={handleAddEgresoItem}
+                    disabled={conceptosConIngreso.length === 0}
+                    style={
+                      conceptosConIngreso.length === 0
+                        ? { opacity: 0.5, cursor: 'not-allowed' }
+                        : undefined
+                    }
                   >
                     <Plus size={14} />
                     <span>Agregar Concepto</span>
                   </button>
                 </div>
 
-                {egresoItems.map((item) => (
-                  <div key={item.id} className={styles.desgloseRow}>
-                    <select
-                      className={styles.fieldSelect}
-                      value={item.motivo}
-                      onChange={(e) =>
-                        handleUpdateEgresoItem(item.id, 'motivo', e.target.value)
-                      }
-                      required
-                    >
-                      {MOTIVOS_CUENTA_LIST.map((m) => (
-                        <option key={`egr-${item.id}-${m.value}`} value={m.value}>
-                          {m.label}
-                        </option>
-                      ))}
-                    </select>
-
-                    <div className={styles.amountWrapper}>
-                      <span className={styles.currencyPrefix}>$</span>
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0.01"
-                        className={`${styles.fieldInput} ${styles.amountInput}`}
-                        placeholder="Monto"
-                        value={item.monto}
-                        onChange={(e) =>
-                          handleUpdateEgresoItem(item.id, 'monto', e.target.value)
-                        }
-                        required
-                      />
-                    </div>
-
-                    <input
-                      type="text"
-                      className={styles.fieldInput}
-                      placeholder="Período/Detalle (ej: 07/2026)"
-                      value={item.periodoDetalle}
-                      onChange={(e) =>
-                        handleUpdateEgresoItem(item.id, 'periodoDetalle', e.target.value)
-                      }
-                    />
-
-                    {egresoItems.length > 1 && (
-                      <button
-                        type="button"
-                        className={styles.btnRemoveItem}
-                        onClick={() => handleRemoveEgresoItem(item.id)}
-                        data-tooltip="Eliminar concepto"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    )}
+                {conceptosConIngreso.length === 0 ? (
+                  <div className={styles.emptyState}>
+                    <AlertTriangle size={28} className={styles.emptyIcon} />
+                    <p style={{ fontWeight: 600, color: '#334155', margin: 0 }}>
+                      Aún no hay conceptos disponibles para egreso
+                    </p>
+                    <p style={{ fontSize: '0.8125rem', marginTop: '0.25rem' }}>
+                      Registra primero un ingreso con el concepto correspondiente para poder
+                      habilitar su egreso.
+                    </p>
                   </div>
-                ))}
+                ) : (
+                  egresoItems.map((item) => {
+                  const itemMontoNum = parseFloat(item.monto) || 0;
+                  const saldoConcepto = getSaldoPorConcepto(item.motivo);
+                  const coinciden = itemMontoNum > 0 ? Math.abs(itemMontoNum - saldoConcepto) < 0.01 : true;
+
+                  return (
+                    <div key={item.id} className={styles.desgloseRowWrapper}>
+                      <div className={styles.desgloseRow}>
+                        <select
+                          className={styles.fieldSelect}
+                          value={item.motivo}
+                          onChange={(e) =>
+                            handleUpdateEgresoItem(item.id, 'motivo', e.target.value)
+                          }
+                          required
+                        >
+                          {conceptosConIngreso.map((m) => (
+                            <option key={`egr-${item.id}-${m.value}`} value={m.value}>
+                              {m.label}
+                            </option>
+                          ))}
+                        </select>
+
+                        <div className={styles.amountWrapper}>
+                          <span className={styles.currencyPrefix}>$</span>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0.01"
+                            className={`${styles.fieldInput} ${styles.amountInput}`}
+                            placeholder="Monto"
+                            value={item.monto}
+                            onChange={(e) =>
+                              handleUpdateEgresoItem(item.id, 'monto', e.target.value)
+                            }
+                            required
+                          />
+                        </div>
+
+                        <input
+                          type="text"
+                          className={styles.fieldInput}
+                          placeholder="Período/Detalle (ej: 07/2026)"
+                          value={item.periodoDetalle}
+                          onChange={(e) =>
+                            handleUpdateEgresoItem(item.id, 'periodoDetalle', e.target.value)
+                          }
+                        />
+
+                        {egresoItems.length > 1 && (
+                          <button
+                            type="button"
+                            className={styles.btnRemoveItem}
+                            onClick={() => handleRemoveEgresoItem(item.id)}
+                            data-tooltip="Eliminar concepto"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        )}
+                      </div>
+                      {!coinciden && (
+                        <div className={styles.conceptWarning}>
+                          <AlertTriangle size={14} />
+                          <span>
+                            No coincide con el saldo de ingreso acumulado para este concepto ({formatCurrency(saldoConcepto)})
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                  })
+                )}
               </div>
 
               {/* BANNER DE VALIDACIÓN DE SUMA */}
@@ -518,14 +805,18 @@ export const ClienteCuentaModal: React.FC<ClienteCuentaModalProps> = ({
                 <button
                   type="submit"
                   className={styles.submitBtnEgreso}
-                  disabled={!isEgresoValido}
+                  disabled={!isEgresoValido || isSubmittingEgreso}
                   style={{
-                    opacity: isEgresoValido ? 1 : 0.5,
-                    cursor: isEgresoValido ? 'pointer' : 'not-allowed',
+                    opacity: isEgresoValido && !isSubmittingEgreso ? 1 : 0.5,
+                    cursor: isEgresoValido && !isSubmittingEgreso ? 'pointer' : 'not-allowed',
                   }}
                 >
-                  <ArrowUpRight size={18} />
-                  <span>Registrar Egreso de Cuenta</span>
+                  {isSubmittingEgreso ? (
+                    <Loader2 size={18} className={styles.spinnerIcon} />
+                  ) : (
+                    <ArrowUpRight size={18} />
+                  )}
+                  <span>{isSubmittingEgreso ? 'Procesando...' : 'Registrar Egreso de Cuenta'}</span>
                 </button>
               </div>
             </form>
@@ -563,9 +854,7 @@ export const ClienteCuentaModal: React.FC<ClienteCuentaModalProps> = ({
                             )}
                           </td>
                           <td>
-                            {mov.tipo === 'ingreso' ? (
-                              <strong>Ingreso de Fondos / Depósito</strong>
-                            ) : mov.items && mov.items.length > 0 ? (
+                            {mov.items && mov.items.length > 0 ? (
                               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                                 {mov.items.map((it) => (
                                   <div key={it.id} style={{ fontSize: '0.78125rem' }}>
@@ -580,7 +869,7 @@ export const ClienteCuentaModal: React.FC<ClienteCuentaModalProps> = ({
                                 ))}
                               </div>
                             ) : (
-                              <strong>{mov.concepto}</strong>
+                              <strong>{mov.concepto || (mov.tipo === 'ingreso' ? 'Ingreso de fondos / Depósito' : 'Egreso de fondos')}</strong>
                             )}
                           </td>
                           <td>{mov.nroComprobanteVEP || '—'}</td>

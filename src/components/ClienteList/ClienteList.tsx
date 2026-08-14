@@ -42,7 +42,10 @@ export const ClienteList: React.FC<ClienteListProps> = ({
   const [filtroEstado, setFiltroEstado] = useState<'todos' | 'activos' | 'bajas'>('todos');
   const [filtroCategoria, setFiltroCategoria] = useState<string>('todos');
   const [clienteDetalle, setClienteDetalle] = useState<Cliente | null>(null);
-  const [clienteCuenta, setClienteCuenta] = useState<Cliente | null>(null);
+  const [clienteCuentaId, setClienteCuentaId] = useState<string | null>(null);
+  const clienteCuenta = clienteCuentaId
+    ? clientes.find((c) => c.id === clienteCuentaId) || null
+    : null;
 
   // Métricas rápidas
   const totalClientes = clientes.length;
@@ -515,7 +518,7 @@ export const ClienteList: React.FC<ClienteListProps> = ({
                       <button
                         type="button"
                         className={`${styles.actionBtn} ${styles.btnCuenta}`}
-                        onClick={() => setClienteCuenta(cliente)}
+                        onClick={() => setClienteCuentaId(cliente.id)}
                         data-tooltip="Cuenta Corriente & Pago de Impuestos"
                       >
                         <Wallet size={15} />
@@ -682,7 +685,7 @@ export const ClienteList: React.FC<ClienteListProps> = ({
       {clienteCuenta && (
         <ClienteCuentaModal
           cliente={clienteCuenta}
-          onClose={() => setClienteCuenta(null)}
+          onClose={() => setClienteCuentaId(null)}
         />
       )}
     </div>
