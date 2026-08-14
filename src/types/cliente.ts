@@ -113,14 +113,23 @@ export interface ClienteFormData {
 
 export type TipoMovimientoCuenta = 'ingreso' | 'egreso_impuesto';
 
+export interface ItemDesgloseMovimiento {
+  id: string;
+  motivo: string;
+  monto: number;
+  periodoDetalle?: string;
+  observacionItem?: string;
+}
+
 export interface MovimientoCuenta {
   id: string;
   clienteId: string;
   fecha: string;
   tipo: TipoMovimientoCuenta;
   monto: number;
-  concepto: string;
+  concepto?: string;
   impuestoNombre?: string;
+  items?: ItemDesgloseMovimiento[];
   nroComprobanteVEP?: string;
   observaciones?: string;
 }

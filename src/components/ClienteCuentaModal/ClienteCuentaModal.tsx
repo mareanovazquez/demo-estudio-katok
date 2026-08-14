@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import type { Cliente } from '../../types/cliente';
+import type { Cliente, ItemDesgloseMovimiento } from '../../types/cliente';
 import { clienteService } from '../../services/clienteService';
 import {
   Wallet,
@@ -9,6 +9,10 @@ import {
   CheckCircle2,
   Receipt,
   MessageSquare,
+  Plus,
+  Trash2,
+  AlertTriangle,
+  ListPlus,
 } from 'lucide-react';
 import styles from './ClienteCuentaModal.module.css';
 
@@ -31,31 +35,37 @@ export const MOTIVOS_CUENTA_LIST = [
   { value: 'Otro', label: 'Otro Concepto / Impuesto' },
 ];
 
+interface FormItemState {
+  id: string;
+  motivo: string;
+  monto: string;
+  periodoDetalle: string;
+}
+
 export const ClienteCuentaModal: React.FC<ClienteCuentaModalProps> = ({
   cliente,
   onClose,
 }) => {
   const [activeTab, setActiveTab] = useState<'ingreso' | 'egreso' | 'historial'>('ingreso');
 
-  // Form para Ingreso (Entrada)
-  const [ingresoMotivo, setIngresoMotivo] = useState<string>('Honorarios');
+  // --- Form 1: Ingresar Dinero (Monto Global sin conceptos fijos) ---
   const [ingresoMonto, setIngresoMonto] = useState<string>('');
   const [ingresoFecha, setIngresoFecha] = useState<string>(
     new Date().toISOString().split('T')[0]
   );
-  const [ingresoPeriodo, setIngresoPeriodo] = useState<string>('');
   const [ingresoComprobante, setIngresoComprobante] = useState<string>('');
   const [ingresoComentarios, setIngresoComentarios] = useState<string>('');
 
-  // Form para Egreso (Salida / Pago)
-  const [egresoMotivo, setEgresoMotivo] = useState<string>('Honorarios');
-  const [egresoMonto, setEgresoMonto] = useState<string>('');
+  // --- Form 2: Egreso / Pago (Monto Total + Desglose 1 a N de Conceptos) ---
+  const [egresoMontoTotal, setEgresoMontoTotal] = useState<string>('');
   const [egresoFecha, setEgresoFecha] = useState<string>(
     new Date().toISOString().split('T')[0]
   );
-  const [egresoPeriodo, setEgresoPeriodo] = useState<string>('');
   const [egresoComprobanteVEP, setEgresoComprobanteVEP] = useState<string>('');
   const [egresoComentarios, setEgresoComentarios] = useState<string>('');
+  const [egresoItems, setEgresoItems] = useState<FormItemState[]>([
+    { id: `item-${Date.now()}-1`, motivo: 'Honorarios', monto: '', periodoDetalle: '' },
+  ]);
 
   // Mensaje de éxito
   const [mensajeExito, setMensajeExito] = useState<string | null>(null);
@@ -63,60 +73,106 @@ export const ClienteCuentaModal: React.FC<ClienteCuentaModalProps> = ({
   const saldoActual = cliente.saldoCuenta || 0;
   const movimientos = cliente.movimientosCuenta || [];
 
+  // --- Helpers de validación para Ingreso ---
+  const totalIngresoOperacion = parseFloat(ingresoMonto) || 0;
+  const isIngresoValido = totalIngresoOperacion > 0;
+
+  // --- Helpers de cálculo y validación de desglosado para Egreso ---
+  const sumaEgresoItems = egresoItems.reduce(
+    (acc, it) => acc + (parseFloat(it.monto) || 0),
+    0
+  );
+  const totalEgresoOperacion = parseFloat(egresoMontoTotal) || 0;
+  const difEgreso = Math.abs(totalEgresoOperacion - sumaEgresoItems);
+  const isEgresoValido =
+    totalEgresoOperacion > 0 &&
+    egresoItems.length > 0 &&
+    difEgreso < 0.01 &&
+    egresoItems.every((i) => parseFloat(i.monto) > 0);
+
+  // Manipulación de filas desglosadas en Egreso
+  const handleAddEgresoItem = () => {
+    setEgresoItems((prev) => [
+      ...prev,
+      { id: `item-${Date.now()}-${prev.length + 1}`, motivo: 'IVA', monto: '', periodoDetalle: '' },
+    ]);
+  };
+
+  const handleRemoveEgresoItem = (id: string) => {
+    if (egresoItems.length <= 1) return;
+    setEgresoItems((prev) => prev.filter((it) => it.id !== id));
+  };
+
+  const handleUpdateEgresoItem = (
+    id: string,
+    field: keyof FormItemState,
+    value: string
+  ) => {
+    setEgresoItems((prev) =>
+      prev.map((it) => (it.id === id ? { ...it, [field]: value } : it))
+    );
+  };
+
+  // Submit Ingreso (Entrada Global)
   const handleSubmitedIngreso = (e: React.FormEvent) => {
     e.preventDefault();
-    const montoNum = parseFloat(ingresoMonto);
-    if (!montoNum || montoNum <= 0) {
+    if (!isIngresoValido) {
       alert('Por favor ingrese un monto válido mayor a 0');
       return;
     }
 
-    const conceptoTexto = `Ingreso: ${ingresoMotivo}${ingresoPeriodo ? ` (${ingresoPeriodo})` : ''}`;
-
     clienteService.registrarMovimientoCuenta(cliente.id, {
       fecha: ingresoFecha,
       tipo: 'ingreso',
-      monto: montoNum,
-      concepto: conceptoTexto,
-      impuestoNombre: ingresoMotivo,
+      monto: totalIngresoOperacion,
+      concepto: 'Ingreso de fondos / Depósito',
       nroComprobanteVEP: ingresoComprobante || undefined,
       observaciones: ingresoComentarios || undefined,
     });
 
     setIngresoMonto('');
-    setIngresoPeriodo('');
     setIngresoComprobante('');
     setIngresoComentarios('');
-    setMensajeExito(`¡Ingreso por "${ingresoMotivo}" registrado exitosamente!`);
-    setTimeout(() => setMensajeExito(null), 3000);
+    setMensajeExito(`¡Ingreso de dinero por ${formatCurrency(totalIngresoOperacion)} registrado exitosamente!`);
+    setTimeout(() => setMensajeExito(null), 3500);
   };
 
+  // Submit Egreso (Salida con Desglose 1-N)
   const handleSubmitedEgreso = (e: React.FormEvent) => {
     e.preventDefault();
-    const montoNum = parseFloat(egresoMonto);
-    if (!montoNum || montoNum <= 0) {
-      alert('Por favor ingrese un monto válido mayor a 0');
+    if (!isEgresoValido) {
+      alert('La suma de los conceptos desglosados debe ser exactamente igual al monto total del egreso.');
       return;
     }
 
-    const conceptoTexto = `Egreso: ${egresoMotivo}${egresoPeriodo ? ` (${egresoPeriodo})` : ''}`;
+    const itemsDesglose: ItemDesgloseMovimiento[] = egresoItems.map((it) => ({
+      id: it.id,
+      motivo: it.motivo,
+      monto: parseFloat(it.monto) || 0,
+      periodoDetalle: it.periodoDetalle || undefined,
+    }));
+
+    const motivosResumen = Array.from(new Set(itemsDesglose.map((i) => i.motivo))).join(', ');
+    const conceptoTexto = `Egreso: ${motivosResumen}`;
 
     clienteService.registrarMovimientoCuenta(cliente.id, {
       fecha: egresoFecha,
       tipo: 'egreso_impuesto',
-      monto: montoNum,
+      monto: totalEgresoOperacion,
       concepto: conceptoTexto,
-      impuestoNombre: egresoMotivo,
+      items: itemsDesglose,
       nroComprobanteVEP: egresoComprobanteVEP || undefined,
       observaciones: egresoComentarios || undefined,
     });
 
-    setEgresoMonto('');
-    setEgresoPeriodo('');
+    setEgresoMontoTotal('');
     setEgresoComprobanteVEP('');
     setEgresoComentarios('');
-    setMensajeExito(`¡Egreso por "${egresoMotivo}" registrado exitosamente!`);
-    setTimeout(() => setMensajeExito(null), 3000);
+    setEgresoItems([
+      { id: `item-${Date.now()}-1`, motivo: 'Honorarios', monto: '', periodoDetalle: '' },
+    ]);
+    setMensajeExito(`¡Egreso por ${formatCurrency(totalEgresoOperacion)} registrado exitosamente!`);
+    setTimeout(() => setMensajeExito(null), 3500);
   };
 
   const formatCurrency = (val: number) => {
@@ -221,25 +277,9 @@ export const ClienteCuentaModal: React.FC<ClienteCuentaModalProps> = ({
 
         {/* Modal Body */}
         <div className={styles.modalBody}>
-          {/* TAB 1: INGRESAR DINERO */}
+          {/* TAB 1: INGRESAR DINERO (Ingreso Global) */}
           {activeTab === 'ingreso' && (
             <form onSubmit={handleSubmitedIngreso} className={styles.formGrid}>
-              <div className={styles.fieldGroup}>
-                <label className={styles.fieldLabel}>Motivo de Ingreso *</label>
-                <select
-                  className={styles.fieldSelect}
-                  value={ingresoMotivo}
-                  onChange={(e) => setIngresoMotivo(e.target.value)}
-                  required
-                >
-                  {MOTIVOS_CUENTA_LIST.map((m) => (
-                    <option key={`ing-${m.value}`} value={m.value}>
-                      {m.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
               <div className={styles.fieldGroup}>
                 <label className={styles.fieldLabel}>Monto a Ingresar ($) *</label>
                 <div className={styles.amountWrapper}>
@@ -256,17 +296,6 @@ export const ClienteCuentaModal: React.FC<ClienteCuentaModalProps> = ({
                     autoFocus
                   />
                 </div>
-              </div>
-
-              <div className={styles.fieldGroup}>
-                <label className={styles.fieldLabel}>Período / Detalle (opcional)</label>
-                <input
-                  type="text"
-                  className={styles.fieldInput}
-                  placeholder="Ej: Periodo 07/2026 u Honorarios Mes"
-                  value={ingresoPeriodo}
-                  onChange={(e) => setIngresoPeriodo(e.target.value)}
-                />
               </div>
 
               <div className={styles.fieldGroup}>
@@ -300,14 +329,22 @@ export const ClienteCuentaModal: React.FC<ClienteCuentaModalProps> = ({
                 <input
                   type="text"
                   className={styles.fieldInput}
-                  placeholder="Escriba aquí cualquier comentario o aclaración sobre este ingreso..."
+                  placeholder="Comentarios o aclaraciones sobre el depósito de dinero..."
                   value={ingresoComentarios}
                   onChange={(e) => setIngresoComentarios(e.target.value)}
                 />
               </div>
 
               <div className={styles.fullWidth}>
-                <button type="submit" className={styles.submitBtnIngreso}>
+                <button
+                  type="submit"
+                  className={styles.submitBtnIngreso}
+                  disabled={!isIngresoValido}
+                  style={{
+                    opacity: isIngresoValido ? 1 : 0.5,
+                    cursor: isIngresoValido ? 'pointer' : 'not-allowed',
+                  }}
+                >
                   <ArrowDownRight size={18} />
                   <span>Confirmar Ingreso a Cuenta</span>
                 </button>
@@ -315,27 +352,11 @@ export const ClienteCuentaModal: React.FC<ClienteCuentaModalProps> = ({
             </form>
           )}
 
-          {/* TAB 2: PAGO / EGRESO */}
+          {/* TAB 2: EGRESO / PAGO DE IMPUESTOS (Monto Total + Desglose 1-N) */}
           {activeTab === 'egreso' && (
             <form onSubmit={handleSubmitedEgreso} className={styles.formGrid}>
               <div className={styles.fieldGroup}>
-                <label className={styles.fieldLabel}>Motivo de Egreso / Pago *</label>
-                <select
-                  className={styles.fieldSelect}
-                  value={egresoMotivo}
-                  onChange={(e) => setEgresoMotivo(e.target.value)}
-                  required
-                >
-                  {MOTIVOS_CUENTA_LIST.map((m) => (
-                    <option key={`egr-${m.value}`} value={m.value}>
-                      {m.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className={styles.fieldGroup}>
-                <label className={styles.fieldLabel}>Monto del Egreso ($) *</label>
+                <label className={styles.fieldLabel}>Monto Total del Egreso ($) *</label>
                 <div className={styles.amountWrapper}>
                   <span className={styles.currencyPrefix}>$</span>
                   <input
@@ -344,23 +365,12 @@ export const ClienteCuentaModal: React.FC<ClienteCuentaModalProps> = ({
                     min="0.01"
                     className={`${styles.fieldInput} ${styles.amountInput}`}
                     placeholder="0.00"
-                    value={egresoMonto}
-                    onChange={(e) => setEgresoMonto(e.target.value)}
+                    value={egresoMontoTotal}
+                    onChange={(e) => setEgresoMontoTotal(e.target.value)}
                     required
                     autoFocus
                   />
                 </div>
-              </div>
-
-              <div className={styles.fieldGroup}>
-                <label className={styles.fieldLabel}>Período / Detalle (opcional)</label>
-                <input
-                  type="text"
-                  className={styles.fieldInput}
-                  placeholder="Ej: Periodo 07/2026 o Cuota 2"
-                  value={egresoPeriodo}
-                  onChange={(e) => setEgresoPeriodo(e.target.value)}
-                />
               </div>
 
               <div className={styles.fieldGroup}>
@@ -373,6 +383,110 @@ export const ClienteCuentaModal: React.FC<ClienteCuentaModalProps> = ({
                   required
                 />
               </div>
+
+              {/* SECCIÓN DESGLOSE DE CONCEPTOS / IMPUESTOS (1 a N) */}
+              <div className={styles.desgloseSection}>
+                <div className={styles.desgloseHeader}>
+                  <h4 className={styles.desgloseTitle}>
+                    <ListPlus size={16} /> Desglose de Conceptos / Impuestos (1 a N)
+                  </h4>
+                  <button
+                    type="button"
+                    className={styles.btnAgregarItem}
+                    onClick={handleAddEgresoItem}
+                  >
+                    <Plus size={14} />
+                    <span>Agregar Concepto</span>
+                  </button>
+                </div>
+
+                {egresoItems.map((item) => (
+                  <div key={item.id} className={styles.desgloseRow}>
+                    <select
+                      className={styles.fieldSelect}
+                      value={item.motivo}
+                      onChange={(e) =>
+                        handleUpdateEgresoItem(item.id, 'motivo', e.target.value)
+                      }
+                      required
+                    >
+                      {MOTIVOS_CUENTA_LIST.map((m) => (
+                        <option key={`egr-${item.id}-${m.value}`} value={m.value}>
+                          {m.label}
+                        </option>
+                      ))}
+                    </select>
+
+                    <div className={styles.amountWrapper}>
+                      <span className={styles.currencyPrefix}>$</span>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0.01"
+                        className={`${styles.fieldInput} ${styles.amountInput}`}
+                        placeholder="Monto"
+                        value={item.monto}
+                        onChange={(e) =>
+                          handleUpdateEgresoItem(item.id, 'monto', e.target.value)
+                        }
+                        required
+                      />
+                    </div>
+
+                    <input
+                      type="text"
+                      className={styles.fieldInput}
+                      placeholder="Período/Detalle (ej: 07/2026)"
+                      value={item.periodoDetalle}
+                      onChange={(e) =>
+                        handleUpdateEgresoItem(item.id, 'periodoDetalle', e.target.value)
+                      }
+                    />
+
+                    {egresoItems.length > 1 && (
+                      <button
+                        type="button"
+                        className={styles.btnRemoveItem}
+                        onClick={() => handleRemoveEgresoItem(item.id)}
+                        title="Eliminar concepto"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* BANNER DE VALIDACIÓN DE SUMA */}
+              {totalEgresoOperacion > 0 && (
+                <div
+                  className={`${styles.validationBanner} ${
+                    isEgresoValido
+                      ? styles.validationSuccess
+                      : styles.validationError
+                  }`}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    {isEgresoValido ? (
+                      <CheckCircle2 size={18} />
+                    ) : (
+                      <AlertTriangle size={18} />
+                    )}
+                    <span>
+                      {isEgresoValido
+                        ? '¡El desglose coincide perfectamente con el Monto Total!'
+                        : `La suma de conceptos (${formatCurrency(
+                            sumaEgresoItems
+                          )}) no coincide con el Monto Total (${formatCurrency(
+                            totalEgresoOperacion
+                          )})`}
+                    </span>
+                  </div>
+                  {!isEgresoValido && (
+                    <span>Diferencia: {formatCurrency(difEgreso)}</span>
+                  )}
+                </div>
+              )}
 
               <div className={`${styles.fieldGroup} ${styles.fullWidth}`}>
                 <label className={styles.fieldLabel}>
@@ -394,14 +508,22 @@ export const ClienteCuentaModal: React.FC<ClienteCuentaModalProps> = ({
                 <input
                   type="text"
                   className={styles.fieldInput}
-                  placeholder="Escriba aquí cualquier comentario o aclaración sobre este egreso..."
+                  placeholder="Comentarios o aclaraciones sobre el egreso..."
                   value={egresoComentarios}
                   onChange={(e) => setEgresoComentarios(e.target.value)}
                 />
               </div>
 
               <div className={styles.fullWidth}>
-                <button type="submit" className={styles.submitBtnEgreso}>
+                <button
+                  type="submit"
+                  className={styles.submitBtnEgreso}
+                  disabled={!isEgresoValido}
+                  style={{
+                    opacity: isEgresoValido ? 1 : 0.5,
+                    cursor: isEgresoValido ? 'pointer' : 'not-allowed',
+                  }}
+                >
                   <ArrowUpRight size={18} />
                   <span>Registrar Egreso de Cuenta</span>
                 </button>
@@ -419,10 +541,10 @@ export const ClienteCuentaModal: React.FC<ClienteCuentaModalProps> = ({
                       <tr>
                         <th>Fecha</th>
                         <th>Tipo</th>
-                        <th>Motivo / Detalle</th>
+                        <th>Concepto / Desglose de Impuestos</th>
                         <th>Comprobante / VEP</th>
                         <th>Comentarios</th>
-                        <th style={{ textAlign: 'right' }}>Monto</th>
+                        <th style={{ textAlign: 'right' }}>Monto Total</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -441,7 +563,25 @@ export const ClienteCuentaModal: React.FC<ClienteCuentaModalProps> = ({
                             )}
                           </td>
                           <td>
-                            <strong>{mov.concepto}</strong>
+                            {mov.tipo === 'ingreso' ? (
+                              <strong>Ingreso de Fondos / Depósito</strong>
+                            ) : mov.items && mov.items.length > 0 ? (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                {mov.items.map((it) => (
+                                  <div key={it.id} style={{ fontSize: '0.78125rem' }}>
+                                    <span className={styles.itemBadgePill}>{it.motivo}</span>
+                                    <strong>{formatCurrency(it.monto)}</strong>
+                                    {it.periodoDetalle && (
+                                      <span style={{ color: '#64748b', marginLeft: '0.35rem' }}>
+                                        ({it.periodoDetalle})
+                                      </span>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <strong>{mov.concepto}</strong>
+                            )}
                           </td>
                           <td>{mov.nroComprobanteVEP || '—'}</td>
                           <td>
