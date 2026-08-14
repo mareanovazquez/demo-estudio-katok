@@ -519,14 +519,14 @@ export const ClienteList: React.FC<ClienteListProps> = ({
                         data-tooltip="Cuenta Corriente & Pago de Impuestos"
                       >
                         <Wallet size={15} />
-                        <span>Cuenta</span>
-                      </button>
+                                              </button>
 
                       <button
                         type="button"
                         className={`${styles.actionBtn} ${styles.btnEditar}`}
                         onClick={() => onSelectEditar(cliente)}
                         data-tooltip="Editar cliente en el formulario"
+                        data-tooltip-pos="left"
                       >
                         <Edit3 size={15} />
                       </button>
@@ -541,7 +541,9 @@ export const ClienteList: React.FC<ClienteListProps> = ({
                           cliente.esBaja
                             ? 'Reactivar cliente'
                             : 'Marcar como baja en el sistema'
+
                         }
+                        data-tooltip-pos="left"
                       >
                         <Archive size={15} />
                       </button>
