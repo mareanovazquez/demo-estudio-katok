@@ -516,7 +516,7 @@ export const ClienteList: React.FC<ClienteListProps> = ({
                         title="Editar cliente en el formulario"
                       >
                         <Edit3 size={15} />
-                        <span>Editar</span>
+
                       </button>
 
                       <button
