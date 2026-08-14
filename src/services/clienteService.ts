@@ -1,4 +1,4 @@
-import type { Cliente, ClienteFormData, ClienteResumen } from '../types/cliente';
+import type { Cliente, ClienteFormData, ClienteResumen, MovimientoCuenta } from '../types/cliente';
 import { MOCK_CLIENTES_COMPLETOS } from '../data/mockClientes';
 
 const STORAGE_KEY = 'katok_maestro_clientes_v2';
@@ -114,6 +114,39 @@ class ClienteService {
     this.saveAllToStorage(clientes);
     this.notifyListeners();
     return cliente;
+  }
+
+  /**
+   * Registra un movimiento de dinero en la cuenta corriente de un cliente (Ingreso o Egreso por Pago Impuesto).
+   */
+  public registrarMovimientoCuenta(
+    clienteId: string,
+    movimientoData: Omit<MovimientoCuenta, 'id' | 'clienteId'>
+  ): MovimientoCuenta | undefined {
+    const clientes = this.getClientes();
+    const cliente = clientes.find((c) => c.id === clienteId);
+    if (!cliente) return undefined;
+
+    const nuevoMovimiento: MovimientoCuenta = {
+      ...movimientoData,
+      id: `mov-${Date.now().toString(36)}-${Math.floor(Math.random() * 1000)}`,
+      clienteId,
+    };
+
+    if (!cliente.movimientosCuenta) {
+      cliente.movimientosCuenta = [];
+    }
+
+    cliente.movimientosCuenta.unshift(nuevoMovimiento);
+
+    // Calcular el saldo acumulado
+    const saldoActual = cliente.saldoCuenta || 0;
+    const impacto = nuevoMovimiento.tipo === 'ingreso' ? nuevoMovimiento.monto : -nuevoMovimiento.monto;
+    cliente.saldoCuenta = Math.round((saldoActual + impacto) * 100) / 100;
+
+    this.saveAllToStorage(clientes);
+    this.notifyListeners();
+    return nuevoMovimiento;
   }
 
   /**

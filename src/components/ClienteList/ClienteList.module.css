@@ -581,6 +581,17 @@
   color: #1e40af;
 }
 
+.btnCuenta {
+  background-color: #ecfdf5;
+  color: #047857;
+  border-color: #a7f3d0;
+}
+
+.btnCuenta:hover {
+  background-color: #d1fae5;
+  color: #065f46;
+}
+
 .btnBaja {
   background-color: #fef2f2;
   color: #b91c1c;

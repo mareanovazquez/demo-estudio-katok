@@ -17,7 +17,9 @@ import {
   Eye,
   FileText,
   X,
+  Wallet,
 } from 'lucide-react';
+import { ClienteCuentaModal } from '../ClienteCuentaModal/ClienteCuentaModal';
 import styles from './ClienteList.module.css';
 
 interface ClienteListProps {
@@ -40,6 +42,7 @@ export const ClienteList: React.FC<ClienteListProps> = ({
   const [filtroEstado, setFiltroEstado] = useState<'todos' | 'activos' | 'bajas'>('todos');
   const [filtroCategoria, setFiltroCategoria] = useState<string>('todos');
   const [clienteDetalle, setClienteDetalle] = useState<Cliente | null>(null);
+  const [clienteCuenta, setClienteCuenta] = useState<Cliente | null>(null);
 
   // Métricas rápidas
   const totalClientes = clientes.length;
@@ -511,12 +514,21 @@ export const ClienteList: React.FC<ClienteListProps> = ({
 
                       <button
                         type="button"
+                        className={`${styles.actionBtn} ${styles.btnCuenta}`}
+                        onClick={() => setClienteCuenta(cliente)}
+                        title="Cuenta Corriente & Pago de Impuestos"
+                      >
+                        <Wallet size={15} />
+                        <span></span>
+                      </button>
+
+                      <button
+                        type="button"
                         className={`${styles.actionBtn} ${styles.btnEditar}`}
                         onClick={() => onSelectEditar(cliente)}
                         title="Editar cliente en el formulario"
                       >
                         <Edit3 size={15} />
-
                       </button>
 
                       <button
@@ -662,6 +674,14 @@ export const ClienteList: React.FC<ClienteListProps> = ({
             </div>
           </div>
         </div>
+      )}
+
+      {/* 5. Modal de Cuenta Corriente e Ingresos / Pago de Impuestos */}
+      {clienteCuenta && (
+        <ClienteCuentaModal
+          cliente={clienteCuenta}
+          onClose={() => setClienteCuenta(null)}
+        />
       )}
     </div>
   );

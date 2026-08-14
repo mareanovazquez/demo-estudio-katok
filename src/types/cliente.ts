@@ -105,6 +105,24 @@ export interface ClienteFormData {
   fechaBaja?: string;
   motivoBaja?: string;
   biblioratoCarpeta?: string;
+
+  // --- 9. Cuenta Corriente y Saldo ---
+  saldoCuenta?: number;
+  movimientosCuenta?: MovimientoCuenta[];
+}
+
+export type TipoMovimientoCuenta = 'ingreso' | 'egreso_impuesto';
+
+export interface MovimientoCuenta {
+  id: string;
+  clienteId: string;
+  fecha: string;
+  tipo: TipoMovimientoCuenta;
+  monto: number;
+  concepto: string;
+  impuestoNombre?: string;
+  nroComprobanteVEP?: string;
+  observaciones?: string;
 }
 
 /** Resumen de cliente para búsquedas y autocompletado en relaciones */
@@ -116,10 +134,12 @@ export interface ClienteResumen {
   tipo: TipoPersona;
   email?: string;
   celularWhatsapp?: string;
+  saldoCuenta?: number;
 }
 
 /** Entidad completa de cliente persistida con identificador único */
 export interface Cliente extends ClienteFormData {
   id: string;
 }
+
 
