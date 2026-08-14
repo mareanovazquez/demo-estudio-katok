@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import type { Cliente, ItemDesgloseMovimiento } from '../../types/cliente';
 import { clienteService } from '../../services/clienteService';
+import { formatMontoInput, parseMontoInput } from '../../utils/currency';
 import {
   Wallet,
   ArrowDownRight,
@@ -120,16 +121,16 @@ export const ClienteCuentaModal: React.FC<ClienteCuentaModalProps> = ({
 
   // --- Helpers de cálculo y validación de desglosado para Ingreso ---
   const sumaIngresoItems = ingresoItems.reduce(
-    (acc, it) => acc + (parseFloat(it.monto) || 0),
+    (acc, it) => acc + parseMontoInput(it.monto),
     0
   );
-  const totalIngresoOperacion = parseFloat(ingresoMonto) || 0;
+  const totalIngresoOperacion = parseMontoInput(ingresoMonto);
   const difIngreso = Math.abs(totalIngresoOperacion - sumaIngresoItems);
   const isIngresoValido =
     totalIngresoOperacion > 0 &&
     ingresoItems.length > 0 &&
     difIngreso < 0.01 &&
-    ingresoItems.every((i) => parseFloat(i.monto) > 0);
+    ingresoItems.every((i) => parseMontoInput(i.monto) > 0);
 
   // Manipulación de filas desglosadas en Ingreso
   const handleAddIngresoItem = () => {
@@ -149,23 +150,24 @@ export const ClienteCuentaModal: React.FC<ClienteCuentaModalProps> = ({
     field: keyof FormItemState,
     value: string
   ) => {
+    const finalValue = field === 'monto' ? formatMontoInput(value) : value;
     setIngresoItems((prev) =>
-      prev.map((it) => (it.id === id ? { ...it, [field]: value } : it))
+      prev.map((it) => (it.id === id ? { ...it, [field]: finalValue } : it))
     );
   };
 
   // --- Helpers de cálculo y validación de desglosado para Egreso ---
   const sumaEgresoItems = egresoItems.reduce(
-    (acc, it) => acc + (parseFloat(it.monto) || 0),
+    (acc, it) => acc + parseMontoInput(it.monto),
     0
   );
-  const totalEgresoOperacion = parseFloat(egresoMontoTotal) || 0;
+  const totalEgresoOperacion = parseMontoInput(egresoMontoTotal);
   const difEgreso = Math.abs(totalEgresoOperacion - sumaEgresoItems);
   const isEgresoValido =
     totalEgresoOperacion > 0 &&
     egresoItems.length > 0 &&
     difEgreso < 0.01 &&
-    egresoItems.every((i) => parseFloat(i.monto) > 0 && i.motivo);
+    egresoItems.every((i) => parseMontoInput(i.monto) > 0 && i.motivo);
 
   // Manipulación de filas desglosadas en Egreso
   const handleAddEgresoItem = () => {
@@ -190,8 +192,9 @@ export const ClienteCuentaModal: React.FC<ClienteCuentaModalProps> = ({
     field: keyof FormItemState,
     value: string
   ) => {
+    const finalValue = field === 'monto' ? formatMontoInput(value) : value;
     setEgresoItems((prev) =>
-      prev.map((it) => (it.id === id ? { ...it, [field]: value } : it))
+      prev.map((it) => (it.id === id ? { ...it, [field]: finalValue } : it))
     );
   };
 
@@ -209,7 +212,7 @@ export const ClienteCuentaModal: React.FC<ClienteCuentaModalProps> = ({
     const itemsDesglose: ItemDesgloseMovimiento[] = ingresoItems.map((it) => ({
       id: it.id,
       motivo: it.motivo,
-      monto: parseFloat(it.monto) || 0,
+      monto: parseMontoInput(it.monto),
       periodoDetalle: it.periodoDetalle || undefined,
     }));
 
@@ -251,7 +254,7 @@ export const ClienteCuentaModal: React.FC<ClienteCuentaModalProps> = ({
     // Verificar si hay desvíos con respecto a los saldos por concepto
     const desvios = egresoItems
       .map((it) => {
-        const montoConcepto = parseFloat(it.monto) || 0;
+        const montoConcepto = parseMontoInput(it.monto);
         const saldoConcepto = getSaldoPorConcepto(it.motivo);
         if (Math.abs(montoConcepto - saldoConcepto) >= 0.01) {
           return {
@@ -284,7 +287,7 @@ export const ClienteCuentaModal: React.FC<ClienteCuentaModalProps> = ({
     const itemsDesglose: ItemDesgloseMovimiento[] = egresoItems.map((it) => ({
       id: it.id,
       motivo: it.motivo,
-      monto: parseFloat(it.monto) || 0,
+      monto: parseMontoInput(it.monto),
       periodoDetalle: it.periodoDetalle || undefined,
     }));
 
@@ -429,13 +432,12 @@ export const ClienteCuentaModal: React.FC<ClienteCuentaModalProps> = ({
                 <div className={styles.amountWrapper}>
                   <span className={styles.currencyPrefix}>$</span>
                   <input
-                    type="number"
-                    step="0.01"
-                    min="0.01"
+                    type="text"
+                    inputMode="decimal"
                     className={`${styles.fieldInput} ${styles.amountInput}`}
-                    placeholder="0.00"
+                    placeholder="0,00"
                     value={ingresoMonto}
-                    onChange={(e) => setIngresoMonto(e.target.value)}
+                    onChange={(e) => setIngresoMonto(formatMontoInput(e.target.value))}
                     required
                     autoFocus
                   />
@@ -489,11 +491,10 @@ export const ClienteCuentaModal: React.FC<ClienteCuentaModalProps> = ({
                     <div className={styles.amountWrapper}>
                       <span className={styles.currencyPrefix}>$</span>
                       <input
-                        type="number"
-                        step="0.01"
-                        min="0.01"
+                        type="text"
+                        inputMode="decimal"
                         className={`${styles.fieldInput} ${styles.amountInput}`}
-                        placeholder="Monto"
+                        placeholder="0,00"
                         value={item.monto}
                         onChange={(e) =>
                           handleUpdateIngresoItem(item.id, 'monto', e.target.value)
@@ -612,13 +613,12 @@ export const ClienteCuentaModal: React.FC<ClienteCuentaModalProps> = ({
                 <div className={styles.amountWrapper}>
                   <span className={styles.currencyPrefix}>$</span>
                   <input
-                    type="number"
-                    step="0.01"
-                    min="0.01"
+                    type="text"
+                    inputMode="decimal"
                     className={`${styles.fieldInput} ${styles.amountInput}`}
-                    placeholder="0.00"
+                    placeholder="0,00"
                     value={egresoMontoTotal}
-                    onChange={(e) => setEgresoMontoTotal(e.target.value)}
+                    onChange={(e) => setEgresoMontoTotal(formatMontoInput(e.target.value))}
                     required
                     autoFocus
                   />
@@ -671,7 +671,7 @@ export const ClienteCuentaModal: React.FC<ClienteCuentaModalProps> = ({
                   </div>
                 ) : (
                   egresoItems.map((item) => {
-                  const itemMontoNum = parseFloat(item.monto) || 0;
+                  const itemMontoNum = parseMontoInput(item.monto);
                   const saldoConcepto = getSaldoPorConcepto(item.motivo);
                   const coinciden = itemMontoNum > 0 ? Math.abs(itemMontoNum - saldoConcepto) < 0.01 : true;
 
@@ -696,11 +696,10 @@ export const ClienteCuentaModal: React.FC<ClienteCuentaModalProps> = ({
                         <div className={styles.amountWrapper}>
                           <span className={styles.currencyPrefix}>$</span>
                           <input
-                            type="number"
-                            step="0.01"
-                            min="0.01"
+                            type="text"
+                            inputMode="decimal"
                             className={`${styles.fieldInput} ${styles.amountInput}`}
-                            placeholder="Monto"
+                            placeholder="0,00"
                             value={item.monto}
                             onChange={(e) =>
                               handleUpdateEgresoItem(item.id, 'monto', e.target.value)
