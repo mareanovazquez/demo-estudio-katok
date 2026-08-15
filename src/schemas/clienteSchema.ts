@@ -90,7 +90,6 @@ export const clienteSchema = z
       }),
     domicilio: z.string().min(1, 'El domicilio es obligatorio'),
     domicilioFiscal: z.string().min(1, 'El domicilio fiscal es obligatorio'),
-    nroLegajo: z.string().optional().default(''),
     actividades: z
       .array(z.string())
       .max(3, 'Máximo 3 actividades')

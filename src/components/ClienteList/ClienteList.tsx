@@ -47,6 +47,14 @@ export const ClienteList: React.FC<ClienteListProps> = ({
     ? clientes.find((c) => c.id === clienteCuentaId) || null
     : null;
 
+  // Match exacto de Código: permite que tipear el código y apretar Enter abra
+  // esa ficha siempre, sin importar filtros activos ni otros matches ambiguos
+  // en la búsqueda general (ej. un CUIT que contenga esos mismos dígitos).
+  const searchTrim = searchTerm.trim().toLowerCase();
+  const clienteCodigoExacto = searchTrim
+    ? clientes.find((c) => c.codigo.trim().toLowerCase() === searchTrim)
+    : undefined;
+
   // Métricas rápidas
   const totalClientes = clientes.length;
   const activosCount = clientes.filter((c) => !c.esBaja).length;
@@ -91,15 +99,16 @@ export const ClienteList: React.FC<ClienteListProps> = ({
 
       const matchRazon = cliente.razonSocial.toLowerCase().includes(q);
       const matchCodigo = cliente.codigo.toLowerCase().includes(q);
-      const matchLegajo = (cliente.nroLegajo || '').toLowerCase().includes(q);
       const matchEmail = (cliente.email || '').toLowerCase().includes(q);
 
-      // CORRECCIÓN CRÍTICA: solo comparar CUIT por dígitos si el usuario ingresó números
-      const matchCuit = qDigits
-        ? cliente.cuit.replace(/\D/g, '').includes(qDigits)
-        : cliente.cuit.toLowerCase().includes(q);
+      // CORRECCIÓN CRÍTICA: exigir al menos 6 dígitos para matchear por CUIT.
+      // Los códigos de cliente son cortos (2 a 4 dígitos); con menos de 6 dígitos
+      // de búsqueda es casi seguro que el fragmento aparezca por azar dentro de
+      // algún CUIT de 11 dígitos y genere colisiones falsas.
+      const matchCuit =
+        qDigits.length >= 6 && cliente.cuit.replace(/\D/g, '').includes(qDigits);
 
-      return matchRazon || matchCuit || matchCodigo || matchLegajo || matchEmail;
+      return matchRazon || matchCuit || matchCodigo || matchEmail;
     }
 
     return true;
@@ -118,7 +127,10 @@ export const ClienteList: React.FC<ClienteListProps> = ({
     setFiltroCategoria('todos');
   };
 
-  // Abrir modal solo si la búsqueda/filtro arroja exactamente 1 resultado al presionar Enter
+  // Abrir ficha al presionar Enter: prioriza un match EXACTO de Código (la
+  // clienta tipea su código y entra directo, ignorando filtros y ambigüedades
+  // de la búsqueda general); si no hay código exacto, cae al comportamiento
+  // anterior de abrir cuando el filtro deja un único resultado.
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && clienteDetalle) {
@@ -126,21 +138,26 @@ export const ClienteList: React.FC<ClienteListProps> = ({
         return;
       }
 
-      if (e.key === 'Enter' && clientesFiltrados.length === 1 && !clienteDetalle) {
+      if (e.key === 'Enter' && !clienteDetalle) {
         const activeEl = document.activeElement;
         const tagName = activeEl?.tagName.toUpperCase();
 
         // Si el usuario está sobre un botón explícito, no interferir con la acción del botón
         if (tagName === 'BUTTON') return;
 
-        e.preventDefault();
-        setClienteDetalle(clientesFiltrados[0]);
+        if (clienteCodigoExacto) {
+          e.preventDefault();
+          setClienteDetalle(clienteCodigoExacto);
+        } else if (clientesFiltrados.length === 1) {
+          e.preventDefault();
+          setClienteDetalle(clientesFiltrados[0]);
+        }
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [clientesFiltrados, clienteDetalle]);
+  }, [clientesFiltrados, clienteCodigoExacto, clienteDetalle]);
 
   return (
     <div className={styles.container}>
@@ -245,11 +262,11 @@ export const ClienteList: React.FC<ClienteListProps> = ({
           <input
             type="text"
             className={styles.searchInput}
-            placeholder="Buscar por Razón Social, CUIT, Código o Legajo..."
+            placeholder="Buscar por Razón Social, CUIT o Código..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
-          {clientesFiltrados.length === 1 && !clienteDetalle && (
+          {(clienteCodigoExacto || clientesFiltrados.length === 1) && !clienteDetalle && (
             <span
               className={styles.enterHintBadge}
               style={{ right: searchTerm ? '2.35rem' : '0.75rem' }}
@@ -344,7 +361,7 @@ export const ClienteList: React.FC<ClienteListProps> = ({
           <span>
             Mostrando <strong>{clientesFiltrados.length}</strong> de <strong>{totalClientes}</strong> clientes
           </span>
-          {clientesFiltrados.length === 1 && !clienteDetalle && (
+          {(clienteCodigoExacto || clientesFiltrados.length === 1) && !clienteDetalle && (
             <span className={styles.singleResultNotice}>
               ↵ Presiona <strong>Enter</strong> para ver ficha
             </span>
@@ -385,7 +402,7 @@ export const ClienteList: React.FC<ClienteListProps> = ({
         <table className={styles.table}>
           <thead>
             <tr>
-              <th>Cód / Legajo</th>
+              <th>Código</th>
               <th>Razón Social / Tipo</th>
               <th>C.U.I.T.</th>
               <th>Condición Impositiva</th>
@@ -404,9 +421,6 @@ export const ClienteList: React.FC<ClienteListProps> = ({
                 >
                   <td className={styles.tdCodigo}>
                     <span className={styles.codeBadge}>#{cliente.codigo}</span>
-                    {cliente.nroLegajo && (
-                      <span className={styles.legajoText}>{cliente.nroLegajo}</span>
-                    )}
                   </td>
 
                   <td className={styles.tdRazonSocial}>
@@ -610,11 +624,10 @@ export const ClienteList: React.FC<ClienteListProps> = ({
                 <h4><FileText size={16} /> Identificación y Fechas</h4>
                 <div className={styles.infoGrid}>
                   <div><strong>Tipo:</strong> {clienteDetalle.tipo === 'juridica' ? 'Persona Jurídica' : 'Persona Física'}</div>
-                  <div><strong>Legajo:</strong> {clienteDetalle.nroLegajo || '—'}</div>
                   <div><strong>Fecha Alta:</strong> {clienteDetalle.fechaAlta}</div>
                   <div><strong>Fecha Inicio Actividad:</strong> {clienteDetalle.fechaInicio || '—'}</div>
                   {clienteDetalle.fechaNacimiento && <div><strong>Fecha Nacimiento:</strong> {clienteDetalle.fechaNacimiento}</div>}
-                  <div><strong>Agencia AFIP:</strong> {clienteDetalle.agencia || '—'}</div>
+                  <div><strong>Agencia ARCA:</strong> {clienteDetalle.agencia || '—'}</div>
                   <div><strong>Domicilio Fiscal:</strong> {clienteDetalle.domicilioFiscal}</div>
                 </div>
               </div>

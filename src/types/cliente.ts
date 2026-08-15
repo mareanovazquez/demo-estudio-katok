@@ -46,7 +46,6 @@ export interface ClienteFormData {
   cuit: string;
   domicilio: string;
   domicilioFiscal: string;
-  nroLegajo?: string;
   actividades: string[]; // Hasta 3 actividades: [Principal, Sec. 1, Sec. 2]
   agencia?: string;
   dgr?: string;

@@ -46,7 +46,6 @@ const DEFAULT_FORM_VALUES: ClienteFormData = {
   cuit: '',
   domicilio: '',
   domicilioFiscal: '',
-  nroLegajo: '',
   actividades: ['', '', ''],
   agencia: '',
   dgr: '',
@@ -349,7 +348,7 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({
 
           <div className={styles.grid}>
             {/* Código de Cliente */}
-            <div className={styles.col4}>
+            <div className={styles.col6}>
               <label className={styles.label} htmlFor="codigo">
                 Código de Cliente <span className={styles.required}>*</span>
               </label>
@@ -359,7 +358,7 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({
                 className={`${styles.input} ${styles.monoInput} ${
                   errors.codigo ? styles.inputError : ''
                 }`}
-                placeholder="Ej: 1050"
+                placeholder="Ej: 809"
                 {...register('codigo')}
               />
               {errors.codigo && (
@@ -369,7 +368,7 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({
             </div>
 
             {/* CUIT con formateador automático */}
-            <div className={styles.col4}>
+            <div className={styles.col6}>
               <label className={styles.label} htmlFor="cuit">
                 C.U.I.T. <span className={styles.required}>*</span>
               </label>
@@ -396,22 +395,7 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({
               {errors.cuit && (
                 <span className={styles.errorText}>{errors.cuit.message}</span>
               )}
-              <span className={styles.helperText}>Validado por algoritmo de AFIP módulo 11.</span>
-            </div>
-
-            {/* N° Legajo */}
-            <div className={styles.col4}>
-              <label className={styles.label} htmlFor="nroLegajo">
-                N° de Legajo
-              </label>
-              <input
-                id="nroLegajo"
-                type="text"
-                className={`${styles.input} ${styles.monoInput}`}
-                placeholder="Ej: L-480"
-                {...register('nroLegajo')}
-              />
-              <span className={styles.helperText}>Referencia documental interna.</span>
+              <span className={styles.helperText}>Validado por algoritmo de ARCA módulo 11.</span>
             </div>
 
             {/* Razón Social / Nombre Completo */}
@@ -468,7 +452,7 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({
                 id="domicilioFiscal"
                 type="text"
                 className={`${styles.input} ${errors.domicilioFiscal ? styles.inputError : ''}`}
-                placeholder="Domicilio registrado ante AFIP / DGR"
+                placeholder="Domicilio registrado ante ARCA / DGR"
                 {...register('domicilioFiscal')}
               />
               {errors.domicilioFiscal && (
@@ -518,7 +502,7 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({
             {/* Jurisdicciones y Registros */}
             <div className={styles.col3}>
               <label className={styles.label} htmlFor="agencia">
-                Agencia AFIP
+                Agencia ARCA
               </label>
               <input
                 id="agencia"
@@ -638,7 +622,7 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({
                 className={styles.input}
                 {...register('fechaInicio')}
               />
-              <span className={styles.helperText}>Inicio según constancia de inscripción AFIP.</span>
+              <span className={styles.helperText}>Inicio según constancia de inscripción ARCA.</span>
             </div>
           </div>
         </section>
