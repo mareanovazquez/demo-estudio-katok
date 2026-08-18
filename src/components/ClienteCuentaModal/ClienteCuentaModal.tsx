@@ -43,7 +43,6 @@ export const CUENTAS_LIST = [
     label: 'ICBC - Caja de Ahorro',
     medios: ['transferencia', 'debito_automatico'],
   },
-  { value: 'caja_me', label: 'Caja Moneda Extranjera', medios: ['moneda_extranjera'] },
 ];
 
 export const MOTIVOS_CUENTA_LIST = [
