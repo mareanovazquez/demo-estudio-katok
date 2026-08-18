@@ -107,6 +107,13 @@ export const ClienteCuentaModal: React.FC<ClienteCuentaModalProps> = ({
 
   // --- Form 2: Egreso / Pago (Monto Total + Desglose 1 a N de Conceptos) ---
   const [egresoMontoTotal, setEgresoMontoTotal] = useState<string>('');
+  const [egresoMedioPago, setEgresoMedioPago] = useState<string>('efectivo');
+  const cuentasDisponiblesEgreso = CUENTAS_LIST.filter((c) =>
+    c.medios.includes(egresoMedioPago)
+  );
+  const [egresoCuenta, setEgresoCuenta] = useState<string>(
+    cuentasDisponiblesEgreso[0]?.value || ''
+  );
   const [egresoFecha, setEgresoFecha] = useState<string>(
     new Date().toISOString().split('T')[0]
   );
@@ -203,6 +210,12 @@ export const ClienteCuentaModal: React.FC<ClienteCuentaModalProps> = ({
     egresoItems.length > 0 &&
     difEgreso < 0.01 &&
     egresoItems.every((i) => parseMontoInput(i.monto) > 0 && i.motivo);
+
+  const handleChangeEgresoMedioPago = (value: string) => {
+    setEgresoMedioPago(value);
+    const opciones = CUENTAS_LIST.filter((c) => c.medios.includes(value));
+    setEgresoCuenta(opciones[0]?.value || '');
+  };
 
   // Manipulación de filas desglosadas en Egreso
   const handleAddEgresoItem = () => {
@@ -341,6 +354,8 @@ export const ClienteCuentaModal: React.FC<ClienteCuentaModalProps> = ({
         items: itemsDesglose,
         nroComprobanteVEP: egresoComprobanteVEP || undefined,
         observaciones: egresoComentarios || undefined,
+        medioPago: egresoMedioPago,
+        cuentaId: egresoCuenta,
       });
 
       setEgresoMontoTotal('');
@@ -354,6 +369,7 @@ export const ClienteCuentaModal: React.FC<ClienteCuentaModalProps> = ({
           periodoDetalle: '',
         },
       ]);
+      handleChangeEgresoMedioPago('efectivo');
       setIsSubmittingEgreso(false);
       setMensajeExito(`¡Egreso por ${formatCurrency(totalEgresoOperacion)} registrado exitosamente!`);
       setTimeout(() => setMensajeExito(null), 3500);
@@ -681,32 +697,67 @@ export const ClienteCuentaModal: React.FC<ClienteCuentaModalProps> = ({
           {/* TAB 2: EGRESO / PAGO DE IMPUESTOS (Monto Total + Desglose 1-N) */}
           {activeTab === 'egreso' && (
             <form onSubmit={handleSubmitedEgreso} className={styles.formGrid}>
-              <div className={styles.fieldGroup}>
-                <label className={styles.fieldLabel}>Monto Total del Egreso ($) *</label>
-                <div className={styles.amountWrapper}>
-                  <span className={styles.currencyPrefix}>$</span>
-                  <input
-                    type="text"
-                    inputMode="decimal"
-                    className={`${styles.fieldInput} ${styles.amountInput}`}
-                    placeholder="0,00"
-                    value={egresoMontoTotal}
-                    onChange={(e) => setEgresoMontoTotal(formatMontoInput(e.target.value))}
+              <div className={styles.ingresoTopRow}>
+                <div className={styles.fieldGroup}>
+                  <label className={styles.fieldLabel}>Monto Total del Egreso ($) *</label>
+                  <div className={styles.amountWrapper}>
+                    <span className={styles.currencyPrefix}>$</span>
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      className={`${styles.fieldInput} ${styles.amountInput}`}
+                      placeholder="0,00"
+                      value={egresoMontoTotal}
+                      onChange={(e) => setEgresoMontoTotal(formatMontoInput(e.target.value))}
+                      required
+                      autoFocus
+                    />
+                  </div>
+                </div>
+
+                <div className={styles.fieldGroup}>
+                  <label className={styles.fieldLabel}>Medio de Pago *</label>
+                  <select
+                    className={styles.fieldSelect}
+                    value={egresoMedioPago}
+                    onChange={(e) => handleChangeEgresoMedioPago(e.target.value)}
                     required
-                    autoFocus
+                  >
+                    {MEDIOS_PAGO_LIST.map((m) => (
+                      <option key={`medio-egr-${m.value}`} value={m.value}>
+                        {m.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className={styles.fieldGroup}>
+                  <label className={styles.fieldLabel}>Cuenta / Caja de Origen *</label>
+                  <select
+                    className={styles.fieldSelect}
+                    value={egresoCuenta}
+                    onChange={(e) => setEgresoCuenta(e.target.value)}
+                    required
+                    disabled={cuentasDisponiblesEgreso.length === 0}
+                  >
+                    {cuentasDisponiblesEgreso.map((c) => (
+                      <option key={`cuenta-egr-${c.value}`} value={c.value}>
+                        {c.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className={styles.fieldGroup}>
+                  <label className={styles.fieldLabel}>Fecha de Movimiento *</label>
+                  <input
+                    type="date"
+                    className={styles.fieldInput}
+                    value={egresoFecha}
+                    onChange={(e) => setEgresoFecha(e.target.value)}
+                    required
                   />
                 </div>
-              </div>
-
-              <div className={styles.fieldGroup}>
-                <label className={styles.fieldLabel}>Fecha de Movimiento *</label>
-                <input
-                  type="date"
-                  className={styles.fieldInput}
-                  value={egresoFecha}
-                  onChange={(e) => setEgresoFecha(e.target.value)}
-                  required
-                />
               </div>
 
               {/* SECCIÓN DESGLOSE DE CONCEPTOS / IMPUESTOS (1 a N) */}
