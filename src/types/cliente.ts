@@ -131,6 +131,8 @@ export interface MovimientoCuenta {
   items?: ItemDesgloseMovimiento[];
   nroComprobanteVEP?: string;
   observaciones?: string;
+  medioPago?: string;
+  cuentaId?: string;
 }
 
 /** Resumen de cliente para búsquedas y autocompletado en relaciones */

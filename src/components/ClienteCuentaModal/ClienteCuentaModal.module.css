@@ -210,6 +210,13 @@
   gap: 0.35rem;
 }
 
+.ingresoTopRow {
+  grid-column: span 2;
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1.3fr 0.8fr;
+  gap: 1rem;
+}
+
 .fieldLabel {
   font-size: 0.8125rem;
   font-weight: 600;

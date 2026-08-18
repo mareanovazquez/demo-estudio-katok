@@ -23,6 +23,29 @@ interface ClienteCuentaModalProps {
   onClose: () => void;
 }
 
+export const MEDIOS_PAGO_LIST = [
+  { value: 'efectivo', label: 'Efectivo' },
+  { value: 'transferencia', label: 'Transferencia Bancaria' },
+  { value: 'cheque', label: 'Cheque' },
+  { value: 'debito_automatico', label: 'Débito Automático' },
+];
+
+export const CUENTAS_LIST = [
+  { value: 'caja_estudio', label: 'Caja Estudio', medios: ['efectivo'] },
+  { value: 'caja_cristina', label: 'Caja Cristina', medios: ['efectivo'] },
+  {
+    value: 'banco_provincia_cc',
+    label: 'Banco Provincia - Cta. Cte.',
+    medios: ['transferencia', 'cheque', 'debito_automatico'],
+  },
+  {
+    value: 'icbc_ca',
+    label: 'ICBC - Caja de Ahorro',
+    medios: ['transferencia', 'debito_automatico'],
+  },
+  { value: 'caja_me', label: 'Caja Moneda Extranjera', medios: ['moneda_extranjera'] },
+];
+
 export const MOTIVOS_CUENTA_LIST = [
   { value: 'Honorarios', label: 'Honorarios Profesionales Estudio' },
   { value: 'IVA', label: 'IVA (Débito/Crédito)' },
@@ -48,7 +71,7 @@ export const ClienteCuentaModal: React.FC<ClienteCuentaModalProps> = ({
   cliente,
   onClose,
 }) => {
-  const [activeTab, setActiveTab] = useState<'ingreso' | 'egreso' | 'historial'>('ingreso');
+  const [activeTab, setActiveTab] = useState<'ingreso' | 'egreso' | 'historial'>('historial');
 
   const saldoActual = cliente.saldoCuenta || 0;
   const movimientos = cliente.movimientosCuenta || [];
@@ -67,6 +90,13 @@ export const ClienteCuentaModal: React.FC<ClienteCuentaModalProps> = ({
 
   // --- Form 1: Ingresar Dinero (Monto Total + Desglose 1 a N de Conceptos) ---
   const [ingresoMonto, setIngresoMonto] = useState<string>('');
+  const [ingresoMedioPago, setIngresoMedioPago] = useState<string>('efectivo');
+  const cuentasDisponibles = CUENTAS_LIST.filter((c) =>
+    c.medios.includes(ingresoMedioPago)
+  );
+  const [ingresoCuenta, setIngresoCuenta] = useState<string>(
+    cuentasDisponibles[0]?.value || ''
+  );
   const [ingresoFecha, setIngresoFecha] = useState<string>(
     new Date().toISOString().split('T')[0]
   );
@@ -131,6 +161,12 @@ export const ClienteCuentaModal: React.FC<ClienteCuentaModalProps> = ({
     ingresoItems.length > 0 &&
     difIngreso < 0.01 &&
     ingresoItems.every((i) => parseMontoInput(i.monto) > 0);
+
+  const handleChangeIngresoMedioPago = (value: string) => {
+    setIngresoMedioPago(value);
+    const opciones = CUENTAS_LIST.filter((c) => c.medios.includes(value));
+    setIngresoCuenta(opciones[0]?.value || '');
+  };
 
   // Manipulación de filas desglosadas en Ingreso
   const handleAddIngresoItem = () => {
@@ -228,6 +264,8 @@ export const ClienteCuentaModal: React.FC<ClienteCuentaModalProps> = ({
         items: itemsDesglose,
         nroComprobanteVEP: ingresoComprobante || undefined,
         observaciones: ingresoComentarios || undefined,
+        medioPago: ingresoMedioPago,
+        cuentaId: ingresoCuenta,
       });
 
       setIngresoMonto('');
@@ -236,6 +274,7 @@ export const ClienteCuentaModal: React.FC<ClienteCuentaModalProps> = ({
       setIngresoItems([
         { id: `item-ing-${Date.now()}-1`, motivo: 'Honorarios', monto: '', periodoDetalle: '' },
       ]);
+      handleChangeIngresoMedioPago('efectivo');
       setIsSubmittingIngreso(false);
       setMensajeExito(`¡Ingreso de dinero por ${formatCurrency(totalIngresoOperacion)} registrado exitosamente!`);
       setTimeout(() => setMensajeExito(null), 3500);
@@ -371,6 +410,17 @@ export const ClienteCuentaModal: React.FC<ClienteCuentaModalProps> = ({
           <button
             type="button"
             className={`${styles.tabBtn} ${
+              activeTab === 'historial' ? styles.tabBtnActiveHistorial : ''
+            }`}
+            onClick={() => setActiveTab('historial')}
+          >
+            <History size={16} />
+            <span>Historial ({movimientos.length})</span>
+          </button>
+
+          <button
+            type="button"
+            className={`${styles.tabBtn} ${
               activeTab === 'ingreso' ? styles.tabBtnActiveIngreso : ''
             }`}
             onClick={() => setActiveTab('ingreso')}
@@ -388,17 +438,6 @@ export const ClienteCuentaModal: React.FC<ClienteCuentaModalProps> = ({
           >
             <ArrowUpRight size={16} />
             <span>Egreso / Pago Impuesto</span>
-          </button>
-
-          <button
-            type="button"
-            className={`${styles.tabBtn} ${
-              activeTab === 'historial' ? styles.tabBtnActiveHistorial : ''
-            }`}
-            onClick={() => setActiveTab('historial')}
-          >
-            <History size={16} />
-            <span>Historial ({movimientos.length})</span>
           </button>
         </div>
 
@@ -427,32 +466,67 @@ export const ClienteCuentaModal: React.FC<ClienteCuentaModalProps> = ({
           {/* TAB 1: INGRESAR DINERO (Ingreso con Desglose 1-N) */}
           {activeTab === 'ingreso' && (
             <form onSubmit={handleSubmitedIngreso} className={styles.formGrid}>
-              <div className={styles.fieldGroup}>
-                <label className={styles.fieldLabel}>Monto Total del Ingreso ($) *</label>
-                <div className={styles.amountWrapper}>
-                  <span className={styles.currencyPrefix}>$</span>
-                  <input
-                    type="text"
-                    inputMode="decimal"
-                    className={`${styles.fieldInput} ${styles.amountInput}`}
-                    placeholder="0,00"
-                    value={ingresoMonto}
-                    onChange={(e) => setIngresoMonto(formatMontoInput(e.target.value))}
+              <div className={styles.ingresoTopRow}>
+                <div className={styles.fieldGroup}>
+                  <label className={styles.fieldLabel}>Monto Total del Ingreso ($) *</label>
+                  <div className={styles.amountWrapper}>
+                    <span className={styles.currencyPrefix}>$</span>
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      className={`${styles.fieldInput} ${styles.amountInput}`}
+                      placeholder="0,00"
+                      value={ingresoMonto}
+                      onChange={(e) => setIngresoMonto(formatMontoInput(e.target.value))}
+                      required
+                      autoFocus
+                    />
+                  </div>
+                </div>
+
+                <div className={styles.fieldGroup}>
+                  <label className={styles.fieldLabel}>Medio de Pago *</label>
+                  <select
+                    className={styles.fieldSelect}
+                    value={ingresoMedioPago}
+                    onChange={(e) => handleChangeIngresoMedioPago(e.target.value)}
                     required
-                    autoFocus
+                  >
+                    {MEDIOS_PAGO_LIST.map((m) => (
+                      <option key={`medio-${m.value}`} value={m.value}>
+                        {m.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className={styles.fieldGroup}>
+                  <label className={styles.fieldLabel}>Cuenta / Caja de Destino *</label>
+                  <select
+                    className={styles.fieldSelect}
+                    value={ingresoCuenta}
+                    onChange={(e) => setIngresoCuenta(e.target.value)}
+                    required
+                    disabled={cuentasDisponibles.length === 0}
+                  >
+                    {cuentasDisponibles.map((c) => (
+                      <option key={`cuenta-${c.value}`} value={c.value}>
+                        {c.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className={styles.fieldGroup}>
+                  <label className={styles.fieldLabel}>Fecha de Movimiento *</label>
+                  <input
+                    type="date"
+                    className={styles.fieldInput}
+                    value={ingresoFecha}
+                    onChange={(e) => setIngresoFecha(e.target.value)}
+                    required
                   />
                 </div>
-              </div>
-
-              <div className={styles.fieldGroup}>
-                <label className={styles.fieldLabel}>Fecha de Movimiento *</label>
-                <input
-                  type="date"
-                  className={styles.fieldInput}
-                  value={ingresoFecha}
-                  onChange={(e) => setIngresoFecha(e.target.value)}
-                  required
-                />
               </div>
 
               {/* SECCIÓN DESGLOSE DE CONCEPTOS / IMPUESTOS (1 a N) PARA INGRESO */}
@@ -832,6 +906,7 @@ export const ClienteCuentaModal: React.FC<ClienteCuentaModalProps> = ({
                         <th>Fecha</th>
                         <th>Tipo</th>
                         <th>Concepto / Desglose de Impuestos</th>
+                        <th>Medio de Pago / Cuenta</th>
                         <th>Comprobante / VEP</th>
                         <th>Comentarios</th>
                         <th style={{ textAlign: 'right' }}>Monto Total</th>
@@ -869,6 +944,24 @@ export const ClienteCuentaModal: React.FC<ClienteCuentaModalProps> = ({
                               </div>
                             ) : (
                               <strong>{mov.concepto || (mov.tipo === 'ingreso' ? 'Ingreso de fondos / Depósito' : 'Egreso de fondos')}</strong>
+                            )}
+                          </td>
+                          <td>
+                            {mov.medioPago ? (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem' }}>
+                                <span>
+                                  {MEDIOS_PAGO_LIST.find((m) => m.value === mov.medioPago)?.label ||
+                                    mov.medioPago}
+                                </span>
+                                {mov.cuentaId && (
+                                  <span style={{ color: '#64748b', fontSize: '0.75rem' }}>
+                                    {CUENTAS_LIST.find((c) => c.value === mov.cuentaId)?.label ||
+                                      mov.cuentaId}
+                                  </span>
+                                )}
+                              </div>
+                            ) : (
+                              '—'
                             )}
                           </td>
                           <td>{mov.nroComprobanteVEP || '—'}</td>
