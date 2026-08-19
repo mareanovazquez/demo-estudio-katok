@@ -507,6 +507,26 @@
   letter-spacing: -0.01em;
 }
 
+.inputReadOnly {
+  background-color: var(--bg-soft);
+  color: var(--text-muted);
+  cursor: not-allowed;
+  padding-right: var(--spacing-8);
+}
+
+.inputReadOnly:focus {
+  outline: none;
+  box-shadow: none;
+  border-color: var(--border-light);
+}
+
+.readOnlyIcon {
+  position: absolute;
+  right: var(--spacing-3);
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
 .monoText {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;

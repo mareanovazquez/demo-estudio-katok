@@ -55,6 +55,19 @@ class ClienteService {
   }
 
   /**
+   * Calcula el próximo código de cliente disponible (autoincremental sobre
+   * el mayor código numérico existente en la nómina).
+   */
+  public getNextCodigo(): string {
+    const clientes = this.getClientes();
+    const maxCodigo = clientes.reduce((max, c) => {
+      const num = parseInt(c.codigo, 10);
+      return Number.isFinite(num) && num > max ? num : max;
+    }, 0);
+    return String(maxCodigo + 1);
+  }
+
+  /**
    * Guarda o actualiza un cliente.
    * Retorna el cliente guardado con su ID asignado.
    */

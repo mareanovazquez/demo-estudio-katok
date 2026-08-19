@@ -17,6 +17,7 @@ import {
   Info,
   Layers,
   Copy,
+  Lock,
 } from 'lucide-react';
 import type { ClienteFormData } from '../../types/cliente';
 import { clienteSchema, formatCuit, validarCuit } from '../../schemas/clienteSchema';
@@ -25,6 +26,8 @@ import styles from './ClienteForm.module.css';
 
 interface ClienteFormProps {
   initialData?: Partial<ClienteFormData>;
+  /** Próximo código autoincremental sugerido por el sistema (sólo se usa en alta de cliente nuevo). */
+  nextCodigo?: string;
   onSubmit: (data: ClienteFormData) => void;
   onCancel?: () => void;
   isEditing?: boolean;
@@ -101,6 +104,7 @@ const DEFAULT_FORM_VALUES: ClienteFormData = {
 
 export const ClienteForm: React.FC<ClienteFormProps> = ({
   initialData,
+  nextCodigo,
   onSubmit,
   onCancel,
   isEditing = false,
@@ -120,6 +124,7 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({
     defaultValues: {
       ...DEFAULT_FORM_VALUES,
       ...initialData,
+      codigo: initialData?.codigo || nextCodigo || '',
       actividades: initialData?.actividades || ['', '', ''],
       relaciones: initialData?.relaciones || [],
     },
@@ -347,24 +352,26 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({
           </div>
 
           <div className={styles.grid}>
-            {/* Código de Cliente */}
+            {/* Código de Cliente (autoincremental, no editable) */}
             <div className={styles.col6}>
               <label className={styles.label} htmlFor="codigo">
-                Código de Cliente <span className={styles.required}>*</span>
+                Código de Cliente
               </label>
-              <input
-                id="codigo"
-                type="text"
-                className={`${styles.input} ${styles.monoInput} ${
-                  errors.codigo ? styles.inputError : ''
-                }`}
-                placeholder="Ej: 809"
-                {...register('codigo')}
-              />
-              {errors.codigo && (
-                <span className={styles.errorText}>{errors.codigo.message}</span>
-              )}
-              <span className={styles.helperText}>Código numérico único en el sistema.</span>
+              <div className={styles.inputWrapper}>
+                <input
+                  id="codigo"
+                  type="text"
+                  readOnly
+                  className={`${styles.input} ${styles.monoInput} ${styles.inputReadOnly}`}
+                  {...register('codigo')}
+                />
+                <Lock size={14} className={styles.readOnlyIcon} />
+              </div>
+              <span className={styles.helperText}>
+                {isEditing
+                  ? 'El código de cliente no puede modificarse una vez asignado.'
+                  : 'Se asigna automáticamente en forma correlativa al confirmar el alta.'}
+              </span>
             </div>
 
             {/* CUIT con formateador automático */}

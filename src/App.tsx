@@ -144,6 +144,7 @@ export function App() {
             <ClienteForm
               key={clienteAEditar ? `edit-${clienteAEditar.id}` : 'alta-nueva'}
               initialData={clienteAEditar || undefined}
+              nextCodigo={clienteService.getNextCodigo()}
               onSubmit={handleSubmitForm}
               onCancel={() => {
                 setVista('listado');

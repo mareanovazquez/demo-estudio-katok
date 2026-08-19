@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import type { Cliente, ItemDesgloseMovimiento } from '../../types/cliente';
 import { clienteService } from '../../services/clienteService';
 import { formatMontoInput, parseMontoInput } from '../../utils/currency';
@@ -127,6 +127,28 @@ export const ClienteCuentaModal: React.FC<ClienteCuentaModalProps> = ({
       periodoDetalle: '',
     },
   ]);
+
+  // Si un ítem quedó con motivo vacío (porque al agregarlo aún no había
+  // conceptos con ingreso disponibles) y luego se habilita alguno, el
+  // <select> controlado no tiene forma de reflejar ese '' en el DOM y el
+  // navegador muestra la primera opción como si estuviera seleccionada,
+  // aunque el estado siga vacío. Esto rompía la validación de la suma de
+  // conceptos aun cuando los montos coincidían. Se resincroniza acá.
+  const conceptosConIngresoKey = conceptosConIngreso.map((c) => c.value).join('|');
+  useEffect(() => {
+    if (!conceptosConIngreso.length) return;
+    setEgresoItems((prev) => {
+      let changed = false;
+      const next = prev.map((it) => {
+        const motivoValido = it.motivo && conceptosConIngreso.some((c) => c.value === it.motivo);
+        if (motivoValido) return it;
+        changed = true;
+        return { ...it, motivo: conceptosConIngreso[0].value };
+      });
+      return changed ? next : prev;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conceptosConIngresoKey]);
 
   // Mensaje de éxito
   const [mensajeExito, setMensajeExito] = useState<string | null>(null);
